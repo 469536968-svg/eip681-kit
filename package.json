@@ -1,0 +1,13 @@
+{
+  "name": "eip681-kit",
+  "version": "1.0.0",
+  "description": "Strict EIP-681 payment URI parser, validator and formatter. Zero dependencies.",
+  "type": "module",
+  "main": "eip681.mjs",
+  "exports": { ".": "./eip681.mjs" },
+  "scripts": { "test": "node test.mjs" },
+  "files": ["eip681.mjs", "README.md", "LICENSE"],
+  "keywords": ["eip-681","ethereum","payment-uri","usdc","erc20","validation","zero-dependency"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}
