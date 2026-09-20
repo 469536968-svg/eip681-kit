@@ -1,0 +1,16 @@
+{
+  "url": "https://api.github.com/repos/469536968-svg/eip681-kit/pages",
+  "status": null,
+  "cname": null,
+  "custom_404": false,
+  "html_url": "https://469536968-svg.github.io/eip681-kit/",
+  "build_type": "legacy",
+  "source": {
+    "branch": "main",
+    "path": "/"
+  },
+  "public": true,
+  "protected_domain_state": null,
+  "pending_domain_unverified_at": null,
+  "https_enforced": true
+}
