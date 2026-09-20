@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>eip681-kit — payment links that say what they do</title>
+<style>
+:root{--bg:#0b0e14;--card:#141922;--fg:#e6edf3;--dim:#8b949e;--line:#232b36;--accent:#58a6ff;--ok:#3fb950}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+main{max-width:820px;margin:0 auto;padding:40px 20px 70px}
+h1{font-size:22px;margin:0 0 6px}
+p.lede{color:var(--dim);font-size:14px;margin:0 0 30px}
+a.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);
+  border-radius:8px;padding:18px;margin-bottom:14px;transition:border-color .15s}
+a.card:hover{border-color:var(--accent)}
+a.card h2{margin:0 0 6px;font-size:16px}
+a.card .d{color:var(--dim);font-size:13.5px}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle}
+.tag.free{background:rgba(88,166,255,.15);color:var(--accent)}
+.tag.paid{background:rgba(63,185,80,.15);color:var(--ok)}
+footer{color:var(--dim);font-size:12.5px;margin-top:30px;line-height:1.8}
+code{background:#0d1117;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px}
+</style></head><body><main>
+<h1>eip681-kit</h1>
+<p class="lede">A strict EIP-681 parser, a decoder that explains what a payment link will actually do,
+and the tooling around it. Zero dependencies. MIT.</p>
+<a class="card" href="./explain.html">
+  <h2>Explainer <span class="tag free">free</span></h2>
+  <div class="d">Paste a payment URI or QR payload. See the decoded action, the risk level, and the fix
+  for each problem — before anyone signs. Runs entirely in your browser.</div></a>
+<a class="card" href="./demo.html">
+  <h2>Validator / builder <span class="tag free">free</span></h2>
+  <div class="d">Parse and validate EIP-681 URIs offline, and build canonical ones.</div></a>
+<a class="card" href="./hire.html">
+  <h2>Payment-link correctness audit <span class="tag paid">$40 USDC</span></h2>
+  <div class="d">I trace how your project generates and consumes payment URIs, and hand back a written
+  report with concrete diffs. Payment settles on-chain in USDC on Base.</div></a>
+<footer>
+Parser tested against official Keccak-256 vectors and all four canonical EIP-55 vectors.<br>
+Source: <a href="https://github.com/469536968-svg/eip681-kit">github.com/469536968-svg/eip681-kit</a>
+</footer>
+</main></body></html>

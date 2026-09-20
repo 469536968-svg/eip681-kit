@@ -112,12 +112,21 @@ export function explain(uri) {
 
   // --- the classic token-deposit trap ---
   if (isToken) {
-    const contract = params.address || null;
+    const contract = target;              // EIP-681: path address IS the token contract
+    const payee = params.address || null; // EIP-681: ?address= IS the recipient
     if (!contract) {
       warnings.push({
         code: 'TOKEN_NO_CONTRACT', severity: 'high',
-        message: 'A token transfer with no ?address= parameter has no token contract to call.',
-        fix: 'Add address=<token contract>.',
+        message: 'A token transfer whose URI has no contract address in the path. There is nothing '
+          + 'to call.',
+        fix: 'The path address must be the token contract: ethereum:<token>@<chain>/transfer?address=<payee>&uint256=<amount>',
+      });
+    }
+    if (!payee) {
+      warnings.push({
+        code: 'TOKEN_NO_PAYEE', severity: 'high',
+        message: 'A token transfer with no ?address= parameter, so there is no recipient.',
+        fix: 'Add address=<recipient> as the first query parameter.',
       });
     }
     if (!p.recipient && !target) {
@@ -127,13 +136,25 @@ export function explain(uri) {
         fix: 'Add the recipient address before the ?.',
       });
     }
+    if (target && payee && target.toLowerCase() === payee.toLowerCase()) {
+      warnings.push({
+        code: 'CONTRACT_EQUALS_RECIPIENT', severity: 'high',
+        message: 'The token contract and the recipient are the SAME address. In an EIP-681 token '
+          + 'transfer the path address must be the TOKEN CONTRACT and ?address= must be the '
+          + 'RECIPIENT. Setting them equal means the recipient can never be reached — the intended '
+          + 'payee is almost certainly missing.',
+        fix: 'Set the path address to the token contract and ?address= to the payee.',
+      });
+    }
     if (target) {
       notes.push({
-        code: 'PAYEE_IS_THE_ADDRESS',
-        message: `The address in the path (${target}) is the RECIPIENT, not the token contract. `
-          + `The token contract lives only in the ?address= parameter. A partial parser that `
-          + `ignores query parameters will read ${target} as the payee of a NATIVE transfer — `
-          + `i.e. it will try to send the native coin to a person instead of calling a contract.`,
+        code: 'TOKEN_PATH_IS_CONTRACT',
+        message: `In this token transfer the path address (${target}) is the TOKEN CONTRACT and `
+          + `?address=${payee} is the RECIPIENT — that is the correct EIP-681 layout. `
+          + `Know the hazard: a partial parser that ignores query parameters reads ${target} as the `
+          + `payee of a NATIVE transfer, so it tries to send the native coin TO A CONTRACT instead of `
+          + `calling the token. This is why a token deposit QR should show the bare recipient address, `
+          + `not the /transfer form.`,
       });
     }
   }
@@ -191,10 +212,10 @@ export function explain(uri) {
       scheme: s(p.scheme),
       chainId: p.chainId ?? null,
       chainName: p.chainId ? (CHAINS[p.chainId] || null) : null,
-      recipient: to === '(none)' ? null : to,
+      recipient: isToken ? (params.address || p.recipient || null) : (to === '(none)' ? null : to),
       target: s(target),
       action: isToken ? (p.functionName || 'transfer') : 'native transfer',
-      contract: params.address || null,
+      contract: isToken ? (target || null) : null,
       amount,
       rawAmount: s(p.amount),
       amountUnit: hasValue ? 'wei' : hasUint ? 'token-base-units' : null,

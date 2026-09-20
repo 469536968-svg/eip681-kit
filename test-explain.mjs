@@ -25,9 +25,10 @@ const codes = r => r.warnings.map(w => w.code);
   const r = explain('ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1/transfer?address=0x1234567890123456789012345678901234567890&uint256=1e18');
   check('token ok', r.ok);
   check('token action', r.decoded.action === 'transfer', r.decoded.action);
-  check('token contract set', r.decoded.contract === '0x1234567890123456789012345678901234567890', r.decoded.contract);
+  check('token contract is PATH address', r.decoded.contract === '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef', r.decoded.contract);
+  check('token recipient is ?address=', r.decoded.recipient === '0x1234567890123456789012345678901234567890', r.decoded.recipient);
   check('token unit base', r.decoded.amountUnit === 'token-base-units');
-  check('token payee note present', r.notes.some(n => n.code === 'PAYEE_IS_THE_ADDRESS'));
+  check('token path-is-contract note present', r.notes.some(n => n.code === 'TOKEN_PATH_IS_CONTRACT'));
 }
 
 // --- 3. The trap: no chainId ---
