@@ -104,3 +104,75 @@ explain('ethereum:0xdead…@8453/transfer?address=0xToken&uint256=1000000');
 ```
 
 CLI: `node explain.mjs "<ethereum:...>"` — exits 1 on high risk, 3 on invalid.
+
+---
+
+## Conformance vectors - test any implementation against the spec
+
+`vectors/eip681-vectors.json` is a language-agnostic vector set. `conform.mjs`
+runs it against any implementation through a small adapter:
+
+```js
+// my-adapter.mjs
+import { parse } from './my-eip681-lib';
+export default {
+  name: 'my-lib',
+  parse(uri) {
+    const p = parse(uri);
+    return {
+      ok: p.ok, target: p.target, chainId: p.chainId,
+      functionName: p.functionName, recipient: p.recipient,
+      amount: p.amount?.toString() ?? null,
+      errors: p.errors, warnings: p.warnings,
+      checksumValid: p.checksumValid, checksumAbsent: p.checksumAbsent,
+    };
+  },
+};
+```
+
+```bash
+node conform.mjs ./my-adapter.mjs      # exit 0 = conformant, 1 = failures listed
+node conform.mjs                       # self-test the bundled kit
+```
+
+Fields a vector does not assert are ignored. Fields a vector asserts that your
+implementation does not report are **failures** - an implementation that cannot
+report `checksumValid` cannot be trusted to have checked it.
+
+### What the vectors decide
+
+| Vector | What it pins down |
+|---|---|
+| `spec-native-value-sci` | `2.014e18` is valid EIP-681 (decimal mantissa + exponent). Refusing it is non-conformance. |
+| `spec-native-value-gas` | `gas` and `gasPrice` in scientific notation, canonical spelling `gasPrice`. |
+| `spec-erc20-transfer` | Path address is the **contract**; `?address=` is the **recipient**. |
+| `spec-pay-prefix` | `pay-` prefix must be stripped, not refused. |
+| `spec-checksum-required-mixed-case` | Mixed case is an EIP-55 **claim**. |
+| `bad-mixed-case-checksum` | A failing claim is a **hard error**, not a warning. Case does not change the address bytes, so a failed checksum means a possible typo in the hex - paying it can send funds to a *different* address. |
+| `all-lowercase-is-not-a-checksum-claim` | All-lowercase carries no case information, so it cannot be wrong. Refusing it would break every tool that lowercases output. |
+| `token-deposit-bare-address` | The form safe to publish publicly: bare address, no `/transfer`. |
+| `no-chain-id-present` | Valid per grammar, dangerous in practice - valid but warned. |
+| `value-and-uint256-conflict` | Mutually exclusive per spec; wallets disagree, so **refuse**. |
+| `uint256-without-transfer` | `uint256=` with no `/transfer` is unpayable as written. |
+| `not-a-payment-uri` | `https://...` is not an EIP-681 URI. |
+| `amount-wei-not-float` | Amounts are wei strings / bigints, never floats. |
+| `max-uint256-amount` | `2^256-1` accepted; the boundary most float-based parsers miss. |
+
+Every vector carries a `why` field stating the real-world consequence of getting
+it wrong. That is the part a pass count does not tell you.
+
+### Defects these vectors found in this very kit
+
+Written from the spec rather than from this kit's own behaviour, the vectors
+exposed three genuine faults in the parser they were testing:
+
+1. **`2.014e18` was refused** - the spec permits a decimal mantissa with an
+   exponent; the amount pattern only allowed an integer mantissa.
+2. **`gasPrice` was lower-cased in canonical output** - the spec spelling is
+   `gasPrice`; a "canonical" form that is not the spec spelling is not canonical.
+3. **`1.5` base units silently became `1n`** - a fixed-point amount must be
+   refused unless it is a whole number of base units. This one was introduced by
+   fix #1 and caught by the same vectors that prompted it.
+
+Fixing #1 and #2 created #3. That is the argument for running vectors against
+your own implementation, not only publishing them.

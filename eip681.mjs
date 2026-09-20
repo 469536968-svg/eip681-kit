@@ -18,7 +18,7 @@ const ADDRESS_RE = /^(pay-)?(0x[0-9a-fA-F]{40})$/;
 const CHAIN_DEC_RE = /^[0-9]+$/;
 const CHAIN_HEX_RE = /^0x[0-9a-fA-F]+$/;
 const FUNCTION_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const UINT_RE = /^[0-9]+(?:e[0-9]+)?$/i;
+const UINT_RE = /^[0-9]+(?:\.[0-9]+)?(?:e[0-9]+)?$/i;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 function err(code, message) { return { code, message }; }
@@ -41,8 +41,32 @@ export function parseAmount(raw) {
     return { ok: false, value: null, errors: [err('amount-invalid', `amount is not a non-negative integer or scientific notation: ${raw}`)] };
   }
   const [mantissa, exp] = raw.toLowerCase().split('e');
-  let v = BigInt(mantissa);
-  if (exp !== undefined) v *= 10n ** BigInt(exp);
+  const e = exp === undefined ? 0 : Number(exp);
+
+  // A mantissa may carry a decimal point ("2.014e18"), which appears verbatim in
+  // the EIP-681 spec text. Let the fraction contribute digits and reduce the
+  // exponent by its length, so 2.014e18 == 2014 * 10^15 exactly.
+  const dot = mantissa.indexOf('.');
+  let digits = mantissa, shift = e;
+  if (dot >= 0) {
+    const frac = mantissa.slice(dot + 1);
+    digits = mantissa.slice(0, dot) + frac;
+    shift = e - frac.length;
+  }
+  if (digits === '' || !/^[0-9]+$/.test(digits)) {
+    return { ok: false, value: null, errors: [err('amount-invalid', `amount is not a non-negative integer or scientific notation: ${raw}`)] };
+  }
+  let v = BigInt(digits);
+  if (shift >= 0) {
+    v *= 10n ** BigInt(shift);
+  } else {
+    const d = 10n ** BigInt(-shift);
+    if (v % d !== 0n) {
+      // e.g. "1.5" base units. Base units are indivisible, so this is not an amount.
+      return { ok: false, value: null, errors: [err('amount-fractional', `amount is not a whole number of base units: ${raw}`)] };
+    }
+    v /= d;
+  }
   return { ok: true, value: v, errors };
 }
 
@@ -192,8 +216,14 @@ export function parse(uri) {
     } else {
       if (m[1]) warnings.push(warn('pay-prefix', 'the deprecated "pay-" address prefix is present; plain addresses are preferred'));
       out.target = m[2];
-      if (!isChecksumAddress(out.target)) {
-        warnings.push(warn('bad-checksum', `target has an invalid EIP-55 checksum: ${out.target}`));
+      {
+        const body = out.target.replace(/^0x/, '');
+        const mixedCase = /[A-F]/.test(body) && /[a-z]/.test(body);
+        if (mixedCase && !isChecksumAddress(out.target)) {
+          // Mixed case is an explicit EIP-55 claim. If the claim fails, the string
+          // does not describe the address it appears to: refuse rather than pay it.
+          errors.push(err('bad-checksum', `target has mixed case that FAILS its EIP-55 checksum: ${out.target}`));
+        }
       }
       if (out.target.toLowerCase() === ZERO_ADDRESS) {
         errors.push(err('zero-address', 'target is the zero address; funds sent to it are unrecoverable'));
@@ -320,6 +350,10 @@ export function format(v) {
   let s = SCHEME + ':' + v.target;
   if (v.chainId !== null && v.chainId !== undefined) s += '@' + v.chainId;
   if (v.functionName) s += '/' + v.functionName;
+  // Params are stored lower-cased for lookup, but EIP-681 spells some of them with
+  // interior capitals. Canonical output must use the spec spelling or it is not canonical.
+  const CANON_NAME = { address: 'address', uint256: 'uint256', value: 'value',
+                       gas: 'gas', gasprice: 'gasPrice', gaslimit: 'gasLimit' };
   const keys = Object.keys(v.params || {});
   if (keys.length) {
     // deterministic ordering: address, uint256, value, then the rest sorted
@@ -329,7 +363,7 @@ export function format(v) {
       if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
       return a < b ? -1 : a > b ? 1 : 0;
     });
-    s += '?' + keys.map(k => `${k}=${encodeURIComponent(v.params[k])}`).join('&');
+    s += '?' + keys.map(k => `${CANON_NAME[k] || k}=${encodeURIComponent(v.params[k])}`).join('&');
   }
   return s;
 }

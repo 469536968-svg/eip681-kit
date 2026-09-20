@@ -55,7 +55,9 @@ t('a single flipped case is detected as a bad checksum', () => {
 console.log('\n# parseAmount');
 t('decimal', () => assert.equal(parseAmount('1000').value, 1000n));
 t('scientific 1e18 == 10^18 (EIP-681 permits this form)', () => assert.equal(parseAmount('1e18').value, 10n ** 18n));
-t('2.5e3 is rejected (not an integer form)', () => assert.equal(parseAmount('2.5e3').ok, false));
+t('2.5e3 == 2500 (EIP-681 allows scientific notation)', () => { const a = parseAmount('2.5e3'); assert.equal(a.ok, true); assert.equal(a.value, 2500n); });
+t('2.014e18 is exact (spec example)', () => assert.equal(parseAmount('2.014e18').value, 2014000000000000000n));
+t('fractional base units are rejected', () => assert.equal(parseAmount('1.5').ok, false));
 t('hex accepted with a flag by the caller', () => assert.equal(parseAmount('0x2a').value, 42n));
 t('negative rejected', () => assert.equal(parseAmount('-1').ok, false));
 t('empty rejected', () => assert.equal(parseAmount('').ok, false));
@@ -75,10 +77,10 @@ t('omit @chainId -> warning, not error', () => {
   assert.ok(v.ok);
   assert.ok(v.warnings.some(w => w.code === 'no-chain-id'));
 });
-t('bad checksum -> warning, not error (wallets must not silently reject)', () => {
-  const v = parse('ethereum:0x5aAeb6053f3e94c9b9a09f33669435e7ef1beaed@1?value=1');
-  assert.ok(v.ok);
-  assert.ok(v.warnings.some(w => w.code === 'bad-checksum'));
+t('bad checksum -> ERROR (mixed case is a checksum claim; refusing protects funds)', () => {
+  const v = parse('ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeD@1?value=1');
+  assert.equal(v.ok, false);
+  assert.ok(v.errors.some(e => e.code === 'bad-checksum'));
 });
 t('zero address is a hard error', () => {
   const v = parse('ethereum:0x0000000000000000000000000000000000000000@1?value=1');

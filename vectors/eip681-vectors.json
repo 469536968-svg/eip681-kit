@@ -1,0 +1,177 @@
+{
+  "name": "eip681-conformance-vectors",
+  "version": "1.0.0",
+  "reference": "https://eips.ethereum.org/EIPS/eip-681",
+  "notes": [
+    "Each vector lists an input URI and the properties a conforming implementation must produce.",
+    "Vectors marked spec:true are taken directly from the EIP-681 text or its examples.",
+    "Vectors marked spec:false are real-world failure cases documented in the field; they pin down",
+    "behaviour the spec implies but does not spell out.",
+    "'canonical' is the deterministically re-serialised form: scheme:target@chainId/function?params",
+    "with query parameters in the fixed order address,uint256,value,gas,gasPrice and no trailing '?'."
+  ],
+  "vectors": [
+    {
+      "id": "spec-native-value-sci",
+      "spec": true,
+      "input": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359?value=2.014e18",
+      "expect": {
+        "ok": true,
+        "scheme": "ethereum",
+        "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+        "chainId": null,
+        "functionName": null,
+        "isTokenTransfer": false,
+        "amount": "2014000000000000000",
+        "canonical": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359?value=2.014e18"
+      }
+    },
+    {
+      "id": "spec-native-value-gas",
+      "spec": true,
+      "input": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1?value=1e18&gas=21000&gasPrice=1e9",
+      "expect": {
+        "ok": true,
+        "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+        "chainId": 1,
+        "functionName": null,
+        "isTokenTransfer": false,
+        "amount": "1000000000000000000",
+        "gasLimit": "21000",
+        "gasPrice": "1000000000",
+        "canonical": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1?value=1e18&gas=21000&gasPrice=1e9"
+      }
+    },
+    {
+      "id": "spec-erc20-transfer",
+      "spec": true,
+      "input": "ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1/transfer?address=0x1234567890123456789012345678901234567890&uint256=1e18",
+      "expect": {
+        "ok": true,
+        "target": "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "recipient": "0x1234567890123456789012345678901234567890",
+        "chainId": 1,
+        "functionName": "transfer",
+        "isTokenTransfer": true,
+        "amount": "1000000000000000000",
+        "canonical": "ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1/transfer?address=0x1234567890123456789012345678901234567890&uint256=1e18"
+      }
+    },
+    {
+      "id": "spec-pay-prefix",
+      "spec": true,
+      "input": "ethereum:pay-0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1?value=1e18",
+      "expect": {
+        "ok": true,
+        "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+        "chainId": 1,
+        "isTokenTransfer": false,
+        "amount": "1000000000000000000"
+      },
+      "why": "EIP-681 allows an optional 'pay-' prefix on the target address. A parser that does not strip it will reject a valid URI or compute the wrong recipient hash."
+    },
+    {
+      "id": "spec-checksum-required-mixed-case",
+      "spec": true,
+      "input": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed@1?value=1",
+      "expect": {
+        "ok": true,
+        "target": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "checksumValid": true
+      },
+      "why": "This is canonical EIP-55 vector #1. Mixed case means the checksum is meaningful and valid."
+    },
+    {
+      "id": "bad-mixed-case-checksum",
+      "spec": false,
+      "input": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeD@1?value=1",
+      "expect": {
+        "ok": false,
+        "errorCodes": ["BAD_CHECKSUM"]
+      },
+      "why": "Same address with the final character case flipped. Mixed case is an EIP-55 checksum claim, so this must be rejected rather than silently lowercased. A lax parser here sends funds derived from a malformed address string."
+    },
+    {
+      "id": "all-lowercase-is-not-a-checksum-claim",
+      "spec": false,
+      "input": "ethereum:0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed@1?value=1",
+      "expect": {
+        "ok": true,
+        "checksumValid": false,
+        "checksumAbsent": true
+      },
+      "why": "All-lowercase carries no checksum information, so it cannot be wrong. Rejecting it would break every address produced by a tool that lowercases output."
+    },
+    {
+      "id": "token-deposit-bare-address",
+      "spec": false,
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1",
+      "expect": {
+        "ok": true,
+        "isTokenTransfer": false,
+        "amount": null
+      },
+      "why": "The correct form for publishing a token deposit address: bare address, no /transfer, no amount. A partial parser sees a plain payee and sends a native transfer; that is recoverable by the recipient. The /transfer form is NOT safe to publish publicly because such a parser would read the token contract as the payee."
+    },
+    {
+      "id": "no-chain-id-present",
+      "spec": false,
+      "input": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359?value=1e18",
+      "expect": {
+        "ok": true,
+        "chainId": null,
+        "warningCodes": ["NO_CHAIN_ID"]
+      },
+      "why": "Valid per grammar, dangerous in practice: the wallet chooses the network, so one QR can be paid on the wrong chain."
+    },
+    {
+      "id": "value-and-uint256-conflict",
+      "spec": false,
+      "input": "ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1/transfer?address=0x1234567890123456789012345678901234567890&uint256=1&value=2",
+      "expect": {
+        "ok": false,
+        "errorCodes": ["VALUE_AND_UINT256"]
+      },
+      "why": "value= is the native coin amount, uint256= is the token amount. EIP-681 makes them mutually exclusive and implementations disagree about which wins, so a conforming parser must refuse rather than guess."
+    },
+    {
+      "id": "uint256-without-transfer",
+      "spec": false,
+      "input": "ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1?uint256=1",
+      "expect": {
+        "ok": false,
+        "errorCodes": ["UINT256_WITHOUT_TRANSFER"]
+      },
+      "why": "uint256= is a contract-call argument. With no /transfer in the path there is no call to carry it, so the amount is unpayable as written."
+    },
+    {
+      "id": "not-a-payment-uri",
+      "spec": false,
+      "input": "https://example.com/pay?to=me",
+      "expect": {
+        "ok": false,
+        "errorCodes": ["NO_SCHEME"]
+      }
+    },
+    {
+      "id": "amount-wei-not-float",
+      "spec": false,
+      "input": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1?value=1e18",
+      "expect": {
+        "ok": true,
+        "amountMustBeWeiString": "1000000000000000000"
+      },
+      "why": "1e18 wei is 1 ETH. Serialising this through a float gives 1000000000000000000 exactly, but through a JS Number it is not safe for amounts above 2^53. The amount must be carried as a decimal string or bigint."
+    },
+    {
+      "id": "max-uint256-amount",
+      "spec": false,
+      "input": "ethereum:0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef@1/transfer?address=0x1234567890123456789012345678901234567890&uint256=115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "expect": {
+        "ok": true,
+        "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      },
+      "why": "Exactly 2^256-1 must be accepted; one more must be rejected. This is the boundary most implementations get wrong by using Number."
+    }
+  ]
+}

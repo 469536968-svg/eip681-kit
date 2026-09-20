@@ -9,7 +9,7 @@
 //   { ok, scheme, target, chainId, functionName, params, isTokenTransfer,
 //     recipient, amount (BigInt|null), errors[], warnings[], canonical }
 
-import { parse, isChecksumAddress, toChecksumAddress } from './eip681.mjs';
+import { parse, parseAmount, isChecksumAddress, toChecksumAddress } from './eip681.mjs';
 
 const CHAINS = {
   1: 'Ethereum mainnet', 10: 'OP Mainnet', 56: 'BNB Chain', 100: 'Gnosis',
@@ -18,6 +18,36 @@ const CHAINS = {
 };
 
 const s = v => (v === undefined || v === null) ? null : String(v);
+
+// One vocabulary for the whole kit. The parser reports kebab-case machine codes;
+// the explainer reports UPPER_SNAKE codes intended for humans and for test vectors.
+// Left unmapped, the same defect has two names depending on which API you call,
+// so every consumer has to know both. Normalise here, expose both.
+const CODE_ALIASES = {
+  'uint256-without-transfer': 'UINT256_WITHOUT_TRANSFER',
+  'value-and-uint256': 'VALUE_AND_UINT256',
+  'no-scheme': 'NO_SCHEME',
+  'bad-scheme': 'NO_SCHEME',
+  'bad-checksum': 'BAD_CHECKSUM',
+  'pay-prefix': 'PAY_PREFIX',
+  'missing-target': 'NO_TARGET',
+  'bad-amount': 'BAD_AMOUNT',
+  'token-value-ambiguous': 'VALUE_AND_UINT256',
+};
+
+export function canonicalCode(raw) {
+  if (!raw) return raw;
+  return CODE_ALIASES[raw] || String(raw).toUpperCase().replace(/-/g, '_');
+}
+
+// True when the address is mixed-case (a checksum claim) and the claim is valid.
+function checksumState(addr) {
+  if (!addr) return { valid: null, absent: true };
+  const mixed = /[A-F]/.test(addr) && /[a-z]/.test(addr);
+  if (!mixed) return { valid: false, absent: true };
+  try { return { valid: isChecksumAddress(addr) === true, absent: false }; }
+  catch { return { valid: false, absent: false }; }
+}
 
 export function explain(uri) {
   let p;
@@ -53,6 +83,8 @@ export function explain(uri) {
         functionName: p.functionName ?? null, params: p.params || {}, amount: s(p.amount),
       },
       errors: (p.errors || []).slice(),
+      codes: (p.errors || []).map(e => canonicalCode(e.code)),
+      checksum: checksumState(p.target),
       warnings: [],
       notes: [],
       riskLevel: 'invalid',
@@ -214,16 +246,20 @@ export function explain(uri) {
       chainName: p.chainId ? (CHAINS[p.chainId] || null) : null,
       recipient: isToken ? (params.address || p.recipient || null) : (to === '(none)' ? null : to),
       target: s(target),
+      functionName: p.functionName ?? null,
       action: isToken ? (p.functionName || 'transfer') : 'native transfer',
       contract: isToken ? (target || null) : null,
       amount,
+      amountRaw: s(p.amount),
       rawAmount: s(p.amount),
       amountUnit: hasValue ? 'wei' : hasUint ? 'token-base-units' : null,
       gasLimit: params.gas ?? null,
-      gasPrice: params.gasPrice ?? null,
+      gasPrice: (()=>{ const g=params.gasprice; if(!g) return null; const a=parseAmount(String(g)); return a.ok?String(a.value):String(g); })(),
       canonical: p.canonical ?? null,
     },
     errors: errs,
+    codes: [...errs.map(e => canonicalCode(e.code)), ...warnings.map(w => canonicalCode(w.code))],
+    checksum: checksumState(target),
     warnings,
     notes,
     riskLevel,
