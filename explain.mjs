@@ -209,18 +209,20 @@ export function explain(uri) {
   };
 }
 
-// ---------- CLI ----------
-import { basename as _bn } from 'node:path';
-const _self = _bn(new URL(import.meta.url).pathname);
-if (process.argv[1] && _bn(process.argv[1]) === _self) {
-  const input = process.argv[2];
-  if (!input) {
-    console.error('usage: node explain.mjs "<ethereum:...>"');
-    process.exit(2);
+// ---------- CLI (Node only; browser-safe because the import is dynamic) ----------
+if (typeof process !== 'undefined' && process.argv && process.argv[1]) {
+  const { basename } = await import('node:path');
+  const self = basename(new URL(import.meta.url).pathname);
+  if (basename(process.argv[1]) === self) {
+    const input = process.argv[2];
+    if (!input) {
+      console.error('usage: node explain.mjs "<ethereum:...>"');
+      process.exit(2);
+    }
+    const r = explain(input);
+    console.log(JSON.stringify(r, null, 2));
+    process.exit(r.ok ? (r.riskLevel === 'high' ? 1 : 0) : 3);
   }
-  const r = explain(input);
-  console.log(JSON.stringify(r, null, 2));
-  process.exit(r.ok ? (r.riskLevel === 'high' ? 1 : 0) : 3);
 }
 
 export default { explain };
