@@ -77,3 +77,30 @@ the contract, `recipient` is the person, and they are never conflated.
 ## License
 
 MIT.
+
+## Explain a payment URI before you sign it
+
+**Live: https://469536968-svg.github.io/eip681-kit/explain.html**
+
+Paste any EIP-681 URI (or a QR payload) and see what a wallet would actually do with it.
+Runs entirely in the browser, no network calls.
+
+It flags the failure modes that actually cause money loss:
+
+| Code | Meaning |
+|---|---|
+| `NO_CHAIN_ID` | No `@chainId` — the wallet picks the network, so the same QR can pay on the wrong chain |
+| `BAD_CHECKSUM` | Mixed-case address that fails EIP-55 — strict wallets refuse it, lax ones pay a maybe-wrong address |
+| `PAYEE_IS_THE_ADDRESS` | In a token transfer the path address is the **recipient**, not the token contract. Parsers that ignore the query string will try to send native coin to a person |
+| `VALUE_AND_UINT256` | Both amount fields present; EIP-681 makes them mutually exclusive and wallets disagree which wins |
+| `UINT256_WITHOUT_TRANSFER` | `uint256=` with no `/transfer` — no contract call to carry the amount |
+| `NO_AMOUNT` | No amount: the safest form to publish publicly |
+
+Rejected URIs are still explained in plain language instead of just failing (`errorDetails`).
+
+```js
+import { explain } from './explain.mjs';
+explain('ethereum:0xdead…@8453/transfer?address=0xToken&uint256=1000000');
+```
+
+CLI: `node explain.mjs "<ethereum:...>"` — exits 1 on high risk, 3 on invalid.
