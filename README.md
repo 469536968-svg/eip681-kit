@@ -135,6 +135,21 @@ node conform.mjs ./my-adapter.mjs      # exit 0 = conformant, 1 = failures liste
 node conform.mjs                       # self-test the bundled kit
 ```
 
+Not a JavaScript shop? `conform.py` is the same runner in Python, and the vectors
+are plain JSON either way:
+
+```bash
+python conform.py ./adapters/example_python.py
+python conform.py                      # self-test via the bundled example adapter
+```
+
+`adapters/example_python.py` is a complete, runnable adapter showing the required
+return shape. Copy it next to your implementation and point `parse()` at your own
+code. `vectors/README.md` documents every `expect` key and the rules a conforming
+implementation must follow (the important one: a missing assertion is a *failure*,
+not a skip - an implementation that cannot report `checksumValid` cannot be
+trusted to have checked it).
+
 Fields a vector does not assert are ignored. Fields a vector asserts that your
 implementation does not report are **failures** - an implementation that cannot
 report `checksumValid` cannot be trusted to have checked it.
