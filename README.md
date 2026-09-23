@@ -221,3 +221,47 @@ The three vectors that matter most, and why:
 
 Run it before you ship a QR scanner. It found two real defects in this repo's own
 parser and one in its fixtures — the suite is worth more than the code it tests.
+
+## Run it in your CI in three lines
+
+Any repo that parses or emits EIP-681 URIs can adopt the corpus as a GitHub Action.
+No dependencies, no config beyond the path to your parser:
+
+```yaml
+- uses: 469536968-svg/eip681-kit@main
+  with:
+    parser: ./src/parse-uri.mjs   # must export parse(uri)
+```
+
+A failing run prints which vector failed, **the URI**, the expected value, and what
+your parser actually returned — e.g.:
+
+```
+FAIL reject-bad-mixedcase
+     uri: ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359
+     expected REJECT, got accept -> {"ok":true,"target":"0xFB6916...","errors":[]}
+     expected error 'bad-checksum', got []
+```
+
+Outputs `passed` / `failed` are set, so you can gate on them. The action exits `2`
+for setup errors (so a broken path never looks like a passing suite) and `1` for
+real vector failures.
+
+Run it locally the same way:
+
+```bash
+node run-conformance.mjs ./your-parser.mjs          # human-readable
+node run-conformance.mjs ./your-parser.mjs --json   # machine-readable
+node run-conformance.mjs ./your-parser.mjs --vectors ./my-extra-vectors.json
+```
+
+### Expected parser interface
+
+Your module must export `parse(uri)` returning:
+
+```js
+{ ok, scheme, target, chainId, functionName, params, recipient, amount, errors }
+```
+
+`ok:false` plus `errors:[{code,message}]` is how a rejection is reported. For a worked
+adapter, see `adapters/` — each one wires a third-party parser into this shape.

@@ -1,0 +1,65 @@
+name: 'EIP-681 Conformance'
+description: 'Run an independent EIP-681 conformance corpus against your parser, in CI, with zero dependencies.'
+author: '469536968-svg'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  parser:
+    description: 'Path to a JS module exporting parse(uri). Relative to the repository root.'
+    required: true
+  vectors:
+    description: 'Optional path to a vectors JSON file. Defaults to the bundled corpus.'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node version to use. The runner needs >= 18 for ESM + BigInt.'
+    required: false
+    default: '22'
+
+outputs:
+  passed:
+    description: 'Number of vectors that passed.'
+    value: ${{ steps.run.outputs.passed }}
+  failed:
+    description: 'Number of vectors that failed.'
+    value: ${{ steps.run.outputs.failed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Run EIP-681 conformance corpus
+      id: run
+      shell: bash
+      # The corpus resolves the parser path against the *repository root*
+      # (the caller's checkout), not against the action directory.
+      run: |
+        set +e
+        if [ -n "${{ inputs.vectors }}" ]; then
+          ARGS="--vectors ${{ inputs.vectors }}"
+        else
+          ARGS=""
+        fi
+        node "${{ github.action_path }}/run-conformance.mjs" "${{ inputs.parser }}" $ARGS --json > conformance.json 2> conformance.err
+        CODE=$?
+        cat conformance.err >&2 || true
+        cat conformance.json
+        PASSED=$(node -e "try{console.log(require('./conformance.json').passed)}catch(e){console.log(0)}")
+        FAILED=$(node -e "try{console.log(require('./conformance.json').failed)}catch(e){console.log(0)}")
+        echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+        echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
+        if [ "$CODE" -eq 2 ]; then
+          echo "::error::EIP-681 suite could not run (setup error). See output above."
+          exit 2
+        fi
+        if [ "$CODE" -ne 0 ]; then
+          echo "::error::$FAILED EIP-681 vector(s) failed. See the FAIL blocks above -- each names the expected value and what your parser returned."
+          exit 1
+        fi
+        echo "::notice::EIP-681 conformance: $PASSED/$((PASSED+FAILED)) vectors passed."
