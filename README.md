@@ -228,7 +228,7 @@ Any repo that parses or emits EIP-681 URIs can adopt the corpus as a GitHub Acti
 No dependencies, no config beyond the path to your parser:
 
 ```yaml
-- uses: 469536968-svg/eip681-kit@main
+- uses: 469536968-svg/eip681-kit@v1
   with:
     parser: ./src/parse-uri.mjs   # must export parse(uri)
 ```
