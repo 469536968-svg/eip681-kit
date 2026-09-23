@@ -191,3 +191,33 @@ exposed three genuine faults in the parser they were testing:
 
 Fixing #1 and #2 created #3. That is the argument for running vectors against
 your own implementation, not only publishing them.
+
+## EIP-681 conformance corpus (machine-readable)
+
+`vectors/eip681.conformance.json` + `run-conformance.mjs` — a drop-in conformance
+suite for any EIP-681 parser, written because the failure modes that actually cost
+users money are not in the happy path.
+
+```
+node run-conformance.mjs                 # test the bundled parser (10/10)
+node run-conformance.mjs ./your-parser.mjs   # test YOUR parser
+```
+
+Your parser must export `parse(uri) -> { ok, scheme, target, chainId, functionName,
+params, recipient, amount, errors, canonical }` — see `parser_interface` in the JSON.
+
+The three vectors that matter most, and why:
+
+- **`erc20-transfer`** — for `ethereum:<TOKEN>@8453/transfer?address=<PAYEE>&uint256=…`,
+  the segment after `ethereum:` is the **token contract**, not the payee. The payee is
+  the `address` param. A scanner that treats the first address as the recipient sends
+  funds to the contract. Wallets without function-call support fail *silently and
+  wrongly*, not loudly.
+- **`accept-all-lowercase` vs `reject-bad-mixedcase`** — the same 20 bytes, two casings,
+  opposite verdicts. All-lowercase carries no EIP-55 claim → accept. Mixed case is an
+  explicit claim → a failed claim is a hard reject. This pair is the test.
+- **`native-no-chain`** — absent `@chainId` means "current chain", *not* chain 1.
+  Defaulting it to 1 turns a "whatever chain" intent into a mainnet transfer.
+
+Run it before you ship a QR scanner. It found two real defects in this repo's own
+parser and one in its fixtures — the suite is worth more than the code it tests.

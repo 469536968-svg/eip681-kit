@@ -1,0 +1,112 @@
+{
+  "name": "eip681-conformance",
+  "version": "1.1.0",
+  "spec": "EIP-681 (URI Format for Ethereum)",
+  "parser_interface": {
+    "parse(uri) ->": {
+      "ok": "boolean",
+      "scheme": "string",
+      "target": "string|null  // address right after the scheme: the PAYEE for native, the TOKEN CONTRACT for /transfer",
+      "chainId": "number|null // null = absent. MUST NOT be defaulted to 1",
+      "functionName": "string|null",
+      "params": "object // raw query params as strings",
+      "recipient": "string|null // for /transfer: the `address` param = the real payee",
+      "amount": "bigint|null // exact base units (wei, or token base units)",
+      "errors": "[{code,message}]",
+      "canonical": "string"
+    }
+  },
+  "notes": [
+    "Machine-readable conformance vectors for EIP-681 parsers.",
+    "Ground truth, in order: (A) the EIP-681 spec text, (B) official Keccak-256",
+    "vectors, (C) the four canonical EIP-55 checksum vectors.",
+    "INTENT: a wallet team should be able to drop this in and get a red/green",
+    "signal for the URI grammar without writing their own corpus.",
+    "CORRECTED 2026-09-23: 1.0.0 contained two vectors with the SAME uri and",
+    "opposite expectations (the 'mangled mixed case' fixture was written fully",
+    "lowercase, i.e. not mixed case at all). Also field names now match the",
+    "documented parser interface above. Found by running, not by reading.",
+    "The mixed-case pair (bad-mixedcase vs all-lowercase) is the highest-value",
+    "test here: identical bytes, opposite verdicts."
+  ],
+  "checksum": {
+    "lowercase_carries_no_claim": true,
+    "mixed_case_is_a_claim": true,
+    "failed_claim_is_hard_reject": true
+  },
+  "vectors": [
+    {
+      "id": "native-no-chain",
+      "uri": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "accept": true,
+      "expect": { "scheme": "ethereum", "target": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359", "chainId": null, "functionName": null, "amount": null },
+      "why": "Bare `ethereum:ADDRESS`, no @chainId. VALID. Absent chainId means 'current chain' by convention -- it does NOT mean chain 1. Defaulting it to 1 silently converts a 'whatever chain' intent into a mainnet transfer."
+    },
+    {
+      "id": "native-with-chain",
+      "uri": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@8453",
+      "accept": true,
+      "expect": { "target": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359", "chainId": 8453 },
+      "why": "Explicit numeric chainId. 8453 = Base."
+    },
+    {
+      "id": "native-value-scientific",
+      "uri": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@8453?value=1e16",
+      "accept": true,
+      "expect": { "chainId": 8453, "amount": "10000000000000000" },
+      "why": "`value` is in wei and MAY use scientific notation (1e16 = 0.01 ETH = 10000000000000000 wei). Parse as an exact decimal string / BigInt; Number() loses precision above 2^53 wei."
+    },
+    {
+      "id": "native-prefix-capitalised",
+      "uri": "Ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "accept": true,
+      "expect": { "scheme": "ethereum", "target": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359" },
+      "why": "Scheme match MUST be case-insensitive. Capitalised scheme prefixes appear in the wild."
+    },
+    {
+      "id": "erc20-transfer",
+      "uri": "ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x54235780057CC828C92aA40e3b02053881990153&uint256=1e6",
+      "accept": true,
+      "expect": {
+        "target": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "functionName": "transfer",
+        "recipient": "0x54235780057CC828C92aA40e3b02053881990153",
+        "params": { "address": "0x54235780057CC828C92aA40e3b02053881990153", "uint256": "1e6" }
+      },
+      "why": "THE DANGEROUS CASE. The segment before `/transfer` is the TOKEN CONTRACT (0x8335...A02913 = USDC on Base). The payee is the `address` query param. A scanner that treats the post-`ethereum:` segment as the recipient sends funds to the token contract instead of the person. Wallets without function-call support fail by sending to the wrong place, not by erroring."
+    },
+    {
+      "id": "reject-bad-mixedcase",
+      "uri": "ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "accept": false,
+      "expect_error": "bad-checksum",
+      "why": "Canonical EIP-55 vector #2 is 0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359. Here the leading `f` is uppercased, so the string is MIXED CASE -- an explicit EIP-55 claim -- and the claim fails. Still 40 hex chars, still the same 20 bytes. A lenient parser accepts it and pays the right address by luck; a strict one rejects it. Rejecting is correct: a corrupted casing is indistinguishable from a corrupted address. Contrast with the next vector: SAME BYTES, opposite verdict."
+    },
+    {
+      "id": "accept-all-lowercase",
+      "uri": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+      "accept": true,
+      "expect": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" },
+      "why": "All-lowercase carries NO checksum claim, so it is valid and must be accepted. This is the same 20 bytes as the vector above; only the casing differs. Getting this pair right IS the test."
+    },
+    {
+      "id": "reject-double-slash",
+      "uri": "ethereum://0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "accept": false,
+      "why": "EIP-681's scheme is `ethereum:` with NO slashes. Parsers that split on a generic `://` will accept this and then mishandle the real `ethereum:` form. Strip the literal prefix, not a URL scheme."
+    },
+    {
+      "id": "reject-value-and-uint256-mixed",
+      "uri": "ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=0x54235780057CC828C92aA40e3b02053881990153&uint256=1e6&value=1e16",
+      "accept": false,
+      "why": "`value` (native currency, wei) and `uint256` (ERC-20 call argument, token base units) must not both appear on the same target. Mixing them is unit confusion: the same number means two different things in two different currencies."
+    },
+    {
+      "id": "reject-empty-payee",
+      "uri": "ethereum:",
+      "accept": false,
+      "expect_error": "no-target",
+      "why": "No target. Must be rejected, not treated as an empty address."
+    }
+  ]
+}
