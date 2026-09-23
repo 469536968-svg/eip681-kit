@@ -14,11 +14,23 @@
 // NOTE: erc20Transfer/nativeTransfer return { ok, errors, uri } — we unwrap .uri
 //       and surface .errors as null (they return null on any error anyway).
 // MIT. No payment requested.
+//
+// FIX (2026-09-23): deriveEip681 previously accepted ANY 0x+40-hex string as a
+// payee, while parse() enforces the EIP-55 checksum claim on mixed-case input.
+// That asymmetry meant derive could emit a URI its OWN parser rejects, breaking
+// the round-trip invariant the tests rely on. Caught by deriveEip681.test.mjs.
+// Now derive applies the same rule as parse: a mixed-case address is an explicit
+// checksum claim, and a failed claim is refused (null) — we never silently
+// re-case it, because the caller may have meant a different address entirely.
 
-import { erc20Transfer, nativeTransfer, SCHEME } from './eip681.mjs';
+import { erc20Transfer, nativeTransfer, SCHEME, isChecksumAddress } from './eip681.mjs';
 
 const isHexAddress = (s) =>
   typeof s === 'string' && /^0x[0-9a-fA-F]{40}$/.test(s);
+
+// Same rule parse() uses: all-lower/all-upper are treated as "no claim"; mixed
+// case is a claim that must verify. Refuse (return false) on a failed claim.
+const isUsableAddress = (s) => isHexAddress(s) && isChecksumAddress(s);
 
 export const toBaseUnits = (amount, decimals) => {
   // amount: string|number of whole tokens (e.g. "1.5"), decimals: token decimals.
@@ -54,7 +66,7 @@ export function deriveEip681(invoice) {
 
   const { chainId, payee, asset } = invoice;
   if (!Number.isInteger(chainId) || chainId <= 0) return null;
-  if (!isHexAddress(payee)) return null;
+  if (!isUsableAddress(payee)) return null;
 
   // --- Native currency transfer -------------------------------------------
   if (asset === 'native' || asset === null || asset === undefined) {
@@ -67,11 +79,11 @@ export function deriveEip681(invoice) {
   }
 
   // --- ERC-20 transfer -----------------------------------------------------
-  if (!isHexAddress(asset)) return null; // asset must be a token contract address
+  if (!isUsableAddress(asset)) return null; // asset must be a token contract address
   const base = toBaseUnits(invoice.amount, invoice.decimals);
   if (base === null || base === '0') return null;
   const r = erc20Transfer({ chainId, token: asset, to: payee, amount: base });
   return r && r.ok && r.uri ? r.uri : null;
 }
 
-export default { deriveEip681, toBaseUnits, isHexAddress, SCHEME };
+export default { deriveEip681, toBaseUnits, isHexAddress, isUsableAddress, SCHEME };
