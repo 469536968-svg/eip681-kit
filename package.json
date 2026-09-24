@@ -1,13 +1,45 @@
 {
   "name": "eip681-kit",
-  "version": "1.0.0",
-  "description": "Strict EIP-681 payment URI parser, validator and formatter. Zero dependencies.",
+  "version": "1.1.0",
+  "description": "Strict EIP-681 payment URI parser, validator, formatter and CLI. Zero dependencies.",
   "type": "module",
   "main": "eip681.mjs",
-  "exports": { ".": "./eip681.mjs" },
-  "scripts": { "test": "node test.mjs" },
-  "files": ["eip681.mjs", "README.md", "LICENSE"],
-  "keywords": ["eip-681","ethereum","payment-uri","usdc","erc20","validation","zero-dependency"],
+  "bin": {
+    "eip681": "./cli.mjs"
+  },
+  "exports": {
+    ".": "./eip681.mjs",
+    "./derive": "./deriveEip681.mjs"
+  },
+  "scripts": {
+    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs",
+    "test:parser": "node test.mjs",
+    "test:derive": "node deriveEip681.test.mjs",
+    "test:cli": "node cli.test.mjs"
+  },
+  "files": [
+    "eip681.mjs",
+    "deriveEip681.mjs",
+    "cli.mjs",
+    "vectors",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "eip-681",
+    "eip681",
+    "ethereum",
+    "payment-uri",
+    "payment-link",
+    "usdc",
+    "erc20",
+    "validation",
+    "eip-55",
+    "zero-dependency",
+    "cli"
+  ],
   "license": "MIT",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

@@ -265,3 +265,69 @@ Your module must export `parse(uri)` returning:
 
 `ok:false` plus `errors:[{code,message}]` is how a rejection is reported. For a worked
 adapter, see `adapters/` — each one wires a third-party parser into this shape.
+
+## CLI
+
+Zero install, zero dependencies. Either run it from a clone, or let npx fetch it
+straight from git (no npm account, no registry):
+
+```sh
+node cli.mjs check 'ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@8453?value=1e16'
+
+npx github:469536968-svg/eip681-kit check 'ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd'
+```
+
+### Exit codes are the contract
+
+| code | meaning |
+|---|---|
+| 0 | valid / operation succeeded |
+| 1 | the URI (or the derivation request) was rejected |
+| 2 | usage error |
+| 3 | internal error |
+
+`1` and `2` are deliberately distinct: "this payment URI is not acceptable" is a
+different event from "you typed the command wrong", and CI needs to tell them apart.
+
+### Commands
+
+```sh
+# Validate many URIs at once. Prints one JSON object per line; exits 1 if ANY is invalid.
+eip681 validate 'ethereum:0x...' 'Ethereum:0x...'
+
+# Single URI: prints exactly "ok", or the precise reason, and exits 1.
+eip681 check 'ethereum:0x...@8453?value=1e16'
+
+# Re-serialise. Non-canonical input is noted on stderr, canonical form on stdout.
+eip681 fmt 'ethereum:0x1234DEADBEEF5678ABCD1234DEADBEEF5678ABCD'
+
+# Build a URI from explicit fields.
+eip681 derive --chain 8453 --to 0x1234deadbeef5678abcd1234deadbeef5678abcd --value 1e16
+eip681 derive --chain 1 --to 0x... --token 0xa0b8...eb48 --amount 1.5 --decimals 6
+```
+
+### Two behaviours worth knowing
+
+**A mixed-case address is a claim, not a style.** `derive` treats any mixed-case
+payee as an EIP-55 checksum claim. If the checksum does not hold, it refuses and
+exits 1 rather than silently re-casing the address. Re-casing would change the
+declared recipient, which is a much worse outcome than an error message.
+
+**`derive` will not emit a URI it would not accept back.** Every derived URI is
+re-parsed before printing; if the kit's own parser rejected it, `derive` exits 3
+and calls it a bug. That invariant is asserted in `cli.test.mjs`.
+
+### Scientific notation
+
+EIP-681 permits `value=1e16` inside a URI. `parse()` accepts it. `deriveEip681()`
+does **not** — its native path requires plain digits (`/^\d+$/`). The CLI bridges
+that gap by expanding scientific notation exactly, via BigInt arithmetic, before
+calling the library. `1.5e2` becomes `150` wei; `1.5` wei is refused, because
+fractional wei does not exist.
+
+## Tests
+
+```sh
+npm test          # 43 parser + 35 derive + 44 CLI
+npm run test:cli
+```
