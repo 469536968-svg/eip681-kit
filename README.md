@@ -268,14 +268,36 @@ adapter, see `adapters/` — each one wires a third-party parser into this shape
 
 ## CLI
 
-Zero install, zero dependencies. Either run it from a clone, or let npx fetch it
-straight from git (no npm account, no registry):
+Zero install, zero dependencies. There is nothing to `npm install`:
 
 ```sh
+git clone https://github.com/469536968-svg/eip681-kit
+cd eip681-kit
 node cli.mjs check 'ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@8453?value=1e16'
+```
 
+`package.json` declares `bin: { "eip681": "./cli.mjs" }` and the file has a
+`#!/usr/bin/env node` shebang, so a local install also gives you an `eip681`
+command on your PATH:
+
+```sh
+npm install 469536968-svg/eip681-kit   # or: npm link
+eip681 check 'ethereum:0x...@8453?value=1e16'
+```
+
+It is also fetchable straight from git without any registry account:
+
+```sh
 npx github:469536968-svg/eip681-kit check 'ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd'
 ```
+
+> **Verification note.** The clone-and-run command above and the `derive`/`check`/
+> `fmt`/`validate` behaviours below are all executed by `cli.test.mjs`. The two
+> installer forms (`npm install`, `npx github:`) are standard npm resolution and
+> follow from the `bin` field, but they were not runnable on the machine this was
+> built on, so treat them as the documented npm convention rather than as a
+> measured result. If `npx` cannot reach GitHub in your environment, use the
+> clone form — it has no network dependency beyond the clone itself.
 
 ### Exit codes are the contract
 
