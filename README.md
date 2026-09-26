@@ -266,6 +266,75 @@ Your module must export `parse(uri)` returning:
 `ok:false` plus `errors:[{code,message}]` is how a rejection is reported. For a worked
 adapter, see `adapters/` — each one wires a third-party parser into this shape.
 
+## Differential testing against a second implementation
+
+A test suite can only check a parser against its own author's reading of the spec.
+This repo ships a runner that compares **two real implementations** on one corpus:
+
+```
+node differential/run.mjs --require 2
+```
+
+Adapters live in `differential/adapters/`. Currently loaded:
+
+| adapter | version | source |
+|---|---|---|
+| `eip681-kit` | 1.1.0 | this repo |
+| `eth-url-parser` | 1.0.4 | [brunobar79/eth-url-parser](https://github.com/brunobar79/eth-url-parser), loaded from its published `dist/index.js` |
+
+**34 cases, 6 disagreements, 0 adapter errors.** Each case carries the governing rule
+*and* a `strength` field:
+
+- `strength: "spec"` — EIP-681 or RFC 3986 requires the answer. A mismatch fails the run.
+- `strength: "opinion"` — the spec is silent; the answer is a defensible judgement call.
+  Reported for discussion, does not fail the run.
+
+That distinction matters. A corpus that presents its author's opinion as spec is exactly
+as dishonest as a test suite that asserts its own implementation. Two of my own cases
+(`value-zero`, `chain-zero`) were mislabelled `spec` on the first run and were corrected
+to `opinion` after the second implementation disagreed — the disagreement was the
+evidence I was wrong, not that the other parser was.
+
+### The six disagreements
+
+| case | eip681-kit | eth-url-parser | severity |
+|---|---|---|---|
+| `eip55-invalid` | reject | accept | **high** |
+| `erc20-value-and-uint256` | reject | accept | **high** |
+| `value-fraction` | reject | accept | medium |
+| `chain-huge` | reject | accept | medium |
+| `chain-zero` | reject | accept | low |
+| `function-no-args` | reject | accept | low |
+
+Two deserve naming:
+
+**`eip55-invalid`** — `ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1`.
+The mixed case is an EIP-55 checksum claim, and that claim **fails**. `eth-url-parser`
+returns `target_address` unchanged; a caller that pays that field pays the address the
+string claims, not the address it encodes. This is the only disagreement whose failure
+mode is money moving to an unintended recipient.
+
+**`erc20-value-and-uint256`** — a URI carrying both an ERC-20 `uint256` and a `value`.
+`eth-url-parser` parses both and leaves the conflict to the caller (it returns
+`parameters: {uint256:"1000000", value:"1"}`); this parser refuses. Note `eth-url-parser`'s
+own `build()` picks `uint256` whenever the function is `transfer` and ignores `value`
+entirely — so `parse → build` round-trips into a *different* amount than the one the URI
+carried. That asymmetry is worth flagging upstream.
+
+### What this changed in my own code
+
+The first differential run found **my** parser accepting `@0` as chain 0. Fixed
+(`chain-id-zero`), with a regression test, and a second test asserting `@1` still works
+so the fix is not over-eager. Running a second implementation is what surfaced it —
+feeding the corpus only to my own parser would not have.
+
+### Honest limits
+
+`eth-url-parser` v1.0.4 is the only second implementation reachable from this host;
+its dev-server and npm registry paths are not. Two implementations is the floor for a
+meaningful differential, not a survey of the ecosystem. A disagreement here means
+"these two differ", never "one of them is wrong".
+
 ## CLI
 
 Zero install, zero dependencies. There is nothing to `npm install`:

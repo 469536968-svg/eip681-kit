@@ -239,6 +239,12 @@ export function parse(uri) {
       if (!Number.isSafeInteger(out.chainId)) {
         errors.push(err('chain-id-overflow', `chain id is not a safe integer: ${chainRaw}`));
         out.chainId = null;
+      } else if (out.chainId === 0) {
+        // EIP-155 chain ids start at 1. "@0" is not a chain, and a wallet that
+        // reads it as "chain 0" has no network to send on. Refuse rather than
+        // accept a URI whose destination does not exist.
+        errors.push(err('chain-id-zero', 'chain id 0 is not a valid EIP-155 chain id'));
+        out.chainId = null;
       }
     } else if (CHAIN_HEX_RE.test(chainRaw)) {
       out.chainId = Number(BigInt(chainRaw));

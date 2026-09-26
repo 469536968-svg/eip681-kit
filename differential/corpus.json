@@ -1,0 +1,247 @@
+{
+  "name": "eip681 differential corpus",
+  "version": "1.0.0",
+  "note": "Each case carries the EIP-681 rule it probes AND a `strength`. strength=spec means EIP-681 or RFC 3986 requires the answer and a mismatch is a genuine failure; strength=opinion means the spec is silent and the answer is a defensible judgement call, so a mismatch is reported for discussion and does not fail the run. Without this distinction the corpus would be asserting its author's reading as if it were the spec.",
+  "payee": "0x1234deadbeef5678abcd1234deadbeef5678abcd",
+  "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  "cases": [
+    {
+      "id": "native-bare",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd",
+      "expect": "accept",
+      "rule": "EIP-681 target-only form is legal. The chain is unnamed, so a wallet may resolve the address on the wrong chain.",
+      "strength": "spec"
+    },
+    {
+      "id": "native-chain",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1",
+      "expect": "accept",
+      "rule": "`@chainId` names the chain.",
+      "strength": "spec"
+    },
+    {
+      "id": "native-value-sci",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=1e18",
+      "expect": "accept",
+      "rule": "EIP-681 states value MAY be expressed in scientific notation. This is the single most commonly mis-implemented rule.",
+      "strength": "spec"
+    },
+    {
+      "id": "native-value-plain",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=1000000000000000000",
+      "expect": "accept",
+      "rule": "Plain decimal integer wei.",
+      "strength": "spec"
+    },
+    {
+      "id": "scheme-upper",
+      "uri": "Ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1",
+      "expect": "accept",
+      "rule": "RFC 3986 s3.1: URI schemes are case-insensitive. Rejecting 'Ethereum:' is a spec violation.",
+      "strength": "spec"
+    },
+    {
+      "id": "scheme-mixed",
+      "uri": "EtHeReUm:0x1234deadbeef5678abcd1234deadbeef5678abcd@1",
+      "expect": "accept",
+      "rule": "Same as above; mixed case is still the same scheme.",
+      "strength": "spec"
+    },
+    {
+      "id": "erc20-transfer",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0x1234deadbeef5678abcd1234deadbeef5678abcd&uint256=1000000",
+      "expect": "accept",
+      "rule": "ERC-20 form: contract in the target, /transfer function, address= payee, uint256= base units.",
+      "strength": "spec"
+    },
+    {
+      "id": "erc20-uint256-sci",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0x1234deadbeef5678abcd1234deadbeef5678abcd&uint256=1e6",
+      "expect": "accept",
+      "rule": "The scientific-notation permission attaches to numeric arguments generally, not only to `value`.",
+      "strength": "opinion"
+    },
+    {
+      "id": "erc20-no-uint256",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0x1234deadbeef5678abcd1234deadbeef5678abcd",
+      "expect": "reject",
+      "rule": "A /transfer call with an address but no uint256 is incomplete; the amount would be undefined.",
+      "strength": "opinion"
+    },
+    {
+      "id": "erc20-value-and-uint256",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer?address=0x1234deadbeef5678abcd1234deadbeef5678abcd&uint256=1000000&value=1",
+      "expect": "reject",
+      "rule": "value= and an ERC-20 call carry two different amounts. Something has to pick one, silently. This is the case BTCpayServer.USDt#67 ran into.",
+      "strength": "opinion"
+    },
+    {
+      "id": "erc20-no-chain",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0x1234deadbeef5678abcd1234deadbeef5678abcd&uint256=1000000",
+      "expect": "accept",
+      "rule": "Legal but dangerous: USDC exists at different addresses on different chains, so the contract address alone does not identify the chain.",
+      "strength": "opinion"
+    },
+    {
+      "id": "bad-scheme",
+      "uri": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "expect": "reject",
+      "rule": "EIP-681 defines the 'ethereum' scheme. A different scheme must be handed to a different handler, not parsed as EIP-681.",
+      "strength": "spec"
+    },
+    {
+      "id": "garbage",
+      "uri": "garbage:",
+      "expect": "reject",
+      "rule": "Not a URI at all in the EIP-681 sense.",
+      "strength": "spec"
+    },
+    {
+      "id": "target-not-hex",
+      "uri": "ethereum:0xZZZZ@1",
+      "expect": "reject",
+      "rule": "Target must be 20 bytes of hex.",
+      "strength": "spec"
+    },
+    {
+      "id": "target-short",
+      "uri": "ethereum:0x1234@1",
+      "expect": "reject",
+      "rule": "Too short to be an address. Accepting it means a wallet must guess.",
+      "strength": "spec"
+    },
+    {
+      "id": "target-no-0x",
+      "uri": "ethereum:1234deadbeef5678abcd1234deadbeef5678abcd@1",
+      "expect": "reject",
+      "rule": "Addresses carry the 0x prefix. Bare hex is ambiguous and must not be silently prefixed.",
+      "strength": "spec"
+    },
+    {
+      "id": "eip55-valid",
+      "uri": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": "accept",
+      "rule": "EIP-55 test vector #2, correctly cased. Valid.",
+      "strength": "spec"
+    },
+    {
+      "id": "eip55-invalid",
+      "uri": "ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": "reject",
+      "rule": "Same address, mixed case, checksum fails. Mixed case IS a checksum claim. The dangerous middle ground: a lenient parser accepts it and pays the address anyway.",
+      "strength": "opinion"
+    },
+    {
+      "id": "eip55-all-upper",
+      "uri": "ethereum:0xFB6916095CA1DF60BB79CE92CE3EA74C37C5D359@1",
+      "expect": "accept",
+      "rule": "All-uppercase makes no checksum claim, so there is nothing to fail. All-lowercase likewise.",
+      "strength": "spec"
+    },
+    {
+      "id": "value-zero",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=0",
+      "expect": "reject",
+      "rule": "A zero-value transfer is almost always a bug at the caller. Trading implementations differ here; refusing is the safe direction.",
+      "strength": "opinion"
+    },
+    {
+      "id": "value-leading-zeros",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=0001",
+      "expect": "accept",
+      "rule": "Digit string; leading zeros do not change the value. Good canonicalisation test.",
+      "strength": "opinion"
+    },
+    {
+      "id": "value-negative",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=-1",
+      "expect": "reject",
+      "rule": "Unsigned quantity. A negative wei amount cannot be expressed.",
+      "strength": "spec"
+    },
+    {
+      "id": "value-fraction",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=1.5",
+      "expect": "reject",
+      "rule": "wei is the smallest unit; fractional wei does not exist.",
+      "strength": "spec"
+    },
+    {
+      "id": "value-hex",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=0x10",
+      "expect": "reject",
+      "rule": "value is decimal in EIP-681. Accepting 0x10 as 16 (or as 10) is a divergence trap.",
+      "strength": "opinion"
+    },
+    {
+      "id": "chain-zero",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@0",
+      "expect": "reject",
+      "rule": "EIP-155 chain ids start at 1. 0 is not a chain.",
+      "strength": "opinion"
+    },
+    {
+      "id": "chain-huge",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@99999999999999999999999999",
+      "expect": "reject",
+      "rule": "Beyond Number.MAX_SAFE_INTEGER. A parser that returns a truncated float chain id will route payment to the wrong chain.",
+      "strength": "opinion"
+    },
+    {
+      "id": "chain-hex",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@0x1",
+      "expect": "reject",
+      "rule": "chainId is a decimal integer in the URI.",
+      "strength": "opinion"
+    },
+    {
+      "id": "dup-params",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=1&value=2",
+      "expect": "reject",
+      "rule": "Two conflicting amounts. Whichever a parser picks, the other reader may pick differently.",
+      "strength": "opinion"
+    },
+    {
+      "id": "unknown-param",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?value=1&foo=bar",
+      "expect": "accept",
+      "rule": "EIP-681 allows supplementary parameters; unknown ones should be preserved or ignored, not turned into a hard failure.",
+      "strength": "spec"
+    },
+    {
+      "id": "trailing-question",
+      "uri": "ethereum:0x1234deadbeef5678abcd1234deadbeef5678abcd@1?",
+      "expect": "accept",
+      "rule": "Empty query. Structurally a URI with no parameters.",
+      "strength": "opinion"
+    },
+    {
+      "id": "no-scheme",
+      "uri": "0x1234deadbeef5678abcd1234deadbeef5678abcd",
+      "expect": "reject",
+      "rule": "A bare address is not an EIP-681 URI. Treating one as the other is how a QR scanner mis-reads a plain address.",
+      "strength": "spec"
+    },
+    {
+      "id": "name-target",
+      "uri": "ethereum:vitalik.eth@1",
+      "expect": "reject",
+      "rule": "EIP-681 target is an address. ENS names are a separate concern and must not be silently resolved.",
+      "strength": "opinion"
+    },
+    {
+      "id": "empty",
+      "uri": "",
+      "expect": "reject",
+      "rule": "Empty input.",
+      "strength": "spec"
+    },
+    {
+      "id": "function-no-args",
+      "uri": "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48@1/transfer",
+      "expect": "reject",
+      "rule": "A /transfer with no parameters cannot specify a payee or an amount.",
+      "strength": "opinion"
+    }
+  ]
+}
