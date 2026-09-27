@@ -98,8 +98,8 @@ export function keccak256(bytes) {
   const padLen = rate - (bytes.length % rate);
   const padded = new Uint8Array(bytes.length + padLen);
   padded.set(bytes);
-  padded[bytes.length] = 0x01;
-  padded[padded.length - 1] = 0x80;
+  padded[bytes.length] |= 0x01;
+  padded[padded.length - 1] |= 0x80;
 
   for (let off = 0; off < padded.length; off += rate) {
     for (let i = 0; i < rate / 8; i++) {
