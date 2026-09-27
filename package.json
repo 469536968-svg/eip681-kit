@@ -12,7 +12,7 @@
     "./derive": "./deriveEip681.mjs"
   },
   "scripts": {
-    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs",
+    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs",
     "test:parser": "node test.mjs",
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs"

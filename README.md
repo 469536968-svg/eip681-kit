@@ -45,6 +45,12 @@ Nothing is compared against this library's own output:
 
 - **Keccak-256** — the `""`, `"abc"` and fox-sentence vectors. (Two real bugs were
   found this way: a 32-bit lane mask and big-endian lane output.)
+- **Keccak-256 padding edge** — inputs whose byte length is 135 mod 136. The official
+  vectors are all far shorter than that, so they cannot reach the classic single-byte
+  padding collision, where `0x01` and `0x80` are written to the same index and the
+  second silently wins, producing SHA3 padding instead of Keccak: a wrong hash with no
+  error. Found by differential testing against ethers v6, fixed, and locked in by
+  `padding-edge.test.mjs`.
 - **EIP-55** — all four canonical checksum vectors from the EIP.
 - **EIP-681** — the spec's example URIs, plus deliberately malformed inputs that
   must error rather than be coerced.

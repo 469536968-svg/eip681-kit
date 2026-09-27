@@ -58,10 +58,9 @@ pass++;
 console.log('PASS lengths 0..500 all produce a well-formed 32-byte digest');
 
 console.log('\n--- property: padding edge is NOT the SHA3 variant ---');
-// If 0x80 overwrote 0x01, length 135 collides with the SHA3-padded encoding of the
-// same message. Assert it does not.
+// If 0x80 had overwritten 0x01, length 135 would hash as its SHA3-256 padding form.
+// The ground-truth vector above is the Keccak form, so agreement proves the fix.
 const n135 = hex(keccak256(bytes('a'.repeat(135))));
-check('len 135 differs from its SHA3-256 padded form', n135 !== GROUND_TRUTH[135].replace(/^/, ''), true);
 check('len 135 is a fixed point of the corrected padding',
   hex(keccak256(bytes('a'.repeat(135)))), GROUND_TRUTH[135]);
 
