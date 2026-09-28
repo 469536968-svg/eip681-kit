@@ -1,0 +1,63 @@
+{
+  "dataset": "eip681-recipient-hex-length",
+  "version": "1.0.0",
+  "provenance": {
+    "measured_against": "zcash/librustzcash components/eip681 @ 7a2504de3c with PR #3062 applied",
+    "measured_by": "cargo test -p eip681 --test length_sweep -- --nocapture",
+    "date": "2026-09-28",
+    "toolchain": "stable-x86_64-pc-windows-gnu (rustc, native Windows)\n",
+    "note": "Lengths 1..48 only. The over-length direction is covered separately by the upstream PR's own test through 64; this dataset exists to show the two directions meet at exactly 40 with no gap."
+  },
+  "semantics": {
+    "rejected_err": "parse returned Err — refused outright",
+    "rejected_unrecognised": "parse returned Ok(Unrecognised) — refused, treated as a non-EIP-681 URI",
+    "accepted": "parse returned a usable transaction request"
+  },
+  "cases": [
+    {
+      "position": "native_recipient",
+      "template": "ethereum:{recipient}?value=1",
+      "recipient_digits_range": [1, 39],
+      "expected": "rejected_err"
+    },
+    {
+      "position": "native_recipient",
+      "recipient_digits_range": [40, 40],
+      "template": "ethereum:{recipient}?value=1",
+      "expected": "accepted",
+      "variant": "native"
+    },
+    {
+      "position": "native_recipient",
+      "recipient_digits_range": [41, 48],
+      "template": "ethereum:{recipient}?value=1",
+      "expected": "rejected_unrecognised"
+    },
+    {
+      "position": "erc20_token_contract",
+      "template": "ethereum:{token_contract}/transfer?address={payee40}&uint256=1000000",
+      "token_digits_range": [1, 39],
+      "expected": "rejected_err"
+    },
+    {
+      "position": "erc20_token_contract",
+      "token_digits_range": [40, 40],
+      "template": "ethereum:{token_contract}/transfer?address={payee40}&uint256=1000000",
+      "expected": "accepted",
+      "variant": "erc20"
+    },
+    {
+      "position": "erc20_token_contract",
+      "token_digits_range": [41, 48],
+      "template": "ethereum:{token_contract}/transfer?address={payee40}&uint256=1000000",
+      "expected": "rejected_unrecognised"
+    }
+  ],
+  "reference_address_40": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+  "negative_control": {
+    "purpose": "show the fix is load-bearing rather than merely present",
+    "test_file": "librustzcash components/eip681/tests/bruce_new_test.rs (the PR author's own logic)",
+    "unpatched": { "result": "0 passed; 1 failed", "failing_input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590?value=1" },
+    "patched": { "result": "1 passed; 0 failed" }
+  }
+}

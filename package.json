@@ -15,7 +15,9 @@
     "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs",
     "test:parser": "node test.mjs",
     "test:derive": "node deriveEip681.test.mjs",
-    "test:cli": "node cli.test.mjs"
+    "test:cli": "node cli.test.mjs",
+    "conformance": "node conformance/run.mjs",
+    "test:all": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs && node conformance/run.mjs"
   },
   "files": [
     "eip681.mjs",
