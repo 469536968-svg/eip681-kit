@@ -324,11 +324,16 @@ export function parse(uri) {
     if (out.params.uint256 !== undefined) {
       const a = parseAmount(out.params.uint256);
       if (!a.ok) errors.push(...a.errors);
-      else {
+      else if (out.params.value === undefined) {
         out.amount = a.value;
         if (a.value === 0n) warnings.push(warn('token-amount-zero', 'token amount is zero'));
         if (/^0x/i.test(out.params.uint256)) warnings.push(warn('hex-amount', 'amount is hex; decimal is the canonical form for uint256'));
       }
+      // When `value` is also present the amount is already an error
+      // (token-value-ambiguous). Do NOT surface a number that the module has just
+      // declared ambiguous: a consumer reading `amount !== null` instead of `ok`
+      // would otherwise take a silently chosen figure. An erroring parse must not
+      // carry any field that a caller could mistake for a decision.
     }
   } else if (Object.prototype.hasOwnProperty.call(out.params, 'uint256')) {
     errors.push(err('uint256-without-transfer', '"uint256" is only meaningful on a /transfer function'));

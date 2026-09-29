@@ -22,7 +22,43 @@ v.amount        // 1000000n  (bigint, exact)
 v.warnings      // []  — or the specific hazards found
 ```
 
-## The hazards it catches
+## Red-team conformance corpus
+
+`adversarial.mjs` is not a self-agreement suite. Every case in it is an input that
+has actually broken a real parser, or that sits on a sharp edge named in an upstream
+issue. It runs the malformed cases and proves the parser *refuses* them; it runs the
+legal-but-ambiguous cases and proves the parser warns or errors rather than guessing.
+
+```
+node adversarial.mjs     # 48 cases, exit 1 on any regression
+```
+
+Coverage groups:
+
+| Group | What it pins down |
+|---|---|
+| L0 | Keccak-256 against the official vectors; all four canonical EIP-55 vectors; and a **perturbed-nibble** case so "the checksum passed" is falsifiable |
+| C1 | Address-length boundary 39/40/41/42/48/64 — no inherited ceiling from a `parse_min(40)` grammar |
+| C2 | Mixed case is an EIP-55 *claim*: a failing claim is refused, all-lower and all-upper are accepted |
+| C3 | The zero address is refused, not warned |
+| C4 | Chain-id edges: absent (legal, flagged), `0` and empty (refused), hex and decimal, beyond-safe-integer |
+| C5 | Amount corners: `2.014e18` exact, fractional base units refused, uint256 max exact, exponent-only junk |
+| C6 | Token-transfer sharp edges: missing `uint256` warns, contract-as-payee stays distinguishable from recipient |
+| C7 | Structural malforms: no scheme, wrong scheme, empty target, deprecated `pay-` prefix |
+| C8 | Round-trip: helpers emit URIs their own parser accepts, and a malformed URI yields no canonical string |
+
+### Defect found by this corpus
+
+Running the corpus against the then-current parser exposed a real inconsistency:
+for `ethereum:<token>/transfer?address=<to>&uint256=1000&value=1` the parser set
+`ok=false` with `token-value-ambiguous`, **and still populated `amount = 1000n`**.
+A consumer checking `amount !== null` rather than `ok` therefore received a silently
+chosen amount — exactly the outcome the error code exists to prevent.
+
+Fixed so an erroring parse carries no field a caller could mistake for a decision.
+The corpus is the regression guard: the pre-fix parser fails it, the fixed one passes.
+
+## ## The hazards it catches
 
 | Input | Result | Why it matters |
 |---|---|---|
