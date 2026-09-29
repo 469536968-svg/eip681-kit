@@ -17,7 +17,9 @@
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
     "conformance": "node conformance/run.mjs",
-    "test:all": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs && node conformance/run.mjs"
+    "test:all": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs && node conformance/run.mjs",
+    "lint:rust": "node tools/check_unrecognised.mjs tools/fixtures",
+    "selfcheck": "node tools/check_unrecognised.mjs tools/fixtures"
   },
   "files": [
     "eip681.mjs",
