@@ -1,26 +1,41 @@
 #!/usr/bin/env node
-// check_unrecognised.mjs — lint Rust call sites of eip681's *request_parts constructors.
+// check_unrecognised.mjs — lint Rust code that builds eip681 requests.
 //
-// WHY THIS EXISTS (measured, not hypothesised):
-//   zcash/librustzcash components/eip681 @ 7a2504de3c
-//     from_native_request_parts / from_erc20_request_parts both end in `Self::parse(&req)`.
-//     Measured: 41/64/65/128 hex-digit addresses -> Ok(Unrecognised(..)), never Err.
-//   So a caller writing `let r = ..._request_parts(..)?;` gets no failure signal for an
-//   address no chain can sign. The damage is bounded (as_native()/as_erc20() are both None
-//   on Unrecognised), so this is an API-shape lint, NOT a soundness proof.
+// TWO RULES, each with the measurement that justifies it (both against
+// zcash/librustzcash components/eip681 @ 7a2504de3c, PR #3062 applied):
 //
-// HEURISTIC LIMITS — read before trusting output:
-//   * Line/window based, not a parser. A match arm far from the call site can be missed.
-//   * We deliberately do NOT flag propagation that narrows via as_native()/as_erc20(),
-//     because narrowing *is* handling the variant.
-//   * Exit code 1 means "review these", not "this is a bug".
+//   R1 UNRECOGNISED-PROPAGATION
+//      from_native_request_parts / from_erc20_request_parts end in `Self::parse(&req)`.
+//      Measured: 41/64/65/128 hex digits -> Ok(Unrecognised(..)), never Err.
+//      A caller using `?` / unwrap / expect therefore gets no failure signal.
+//
+//   R2 RAW-BYPASS
+//      `into_raw()` is public and matches all three variants:
+//          NativeRequest(r) => r.inner, Erc20Request(r) => r.inner, Unrecognised(r) => r
+//      Measured: the over-length address survives verbatim as
+//          into_raw().target_address -> Address(HexDigits { places: "aaa…128…" })
+//      So into_raw() discards exactly the variant discrimination that was doing the
+//      validation. That is fine IF the caller re-validates, and a silent hazard if not.
+//
+// HEURISTIC LIMITS — read before trusting the output:
+//   * Line/window based, not a parser. A handler far from the call site can be missed.
+//   * R1 does NOT flag propagation narrowed by as_native()/as_erc20() — narrowing is handling.
+//   * R2 does NOT flag into_raw() followed by an explicit length/validation check.
+//   * Exit 1 means "review these", NOT "this is a bug". I cannot prove reachability of a
+//     signer from this file, so the tool does not claim to.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const CTORS = ["from_native_request_parts", "from_erc20_request_parts"];
 const NARROWERS = ["as_native", "as_erc20", "Unrecognised", "into_raw", "as_raw"];
-const SIGNAL_LOST = [/\?;?\s*$/m, /\.unwrap\(\)/, /\.expect\(/];
+const SIGNAL_LOST = [/\?\s*;?\s*$/m, /\.unwrap\(\)/, /\.expect\(/];
+// Markers that the caller re-established the guarantees into_raw() erased.
+const VALIDATORS = [
+  ".len()", "is_empty", "validate", "try_into", "TryFrom",
+  "IncorrectEthAddressLen", "Erc55Validation", "checked_", "assert_",
+];
+const WINDOW = 18;
 
 function rsFiles(dir, out = []) {
   for (const e of readdirSync(dir)) {
@@ -33,39 +48,52 @@ function rsFiles(dir, out = []) {
   return out;
 }
 
-function stripDefs(src) {
-  // Drop `pub fn from_*_request_parts(` definition lines so we only see call sites.
-  return src.replace(/^\s*(pub\s+)?fn\s+from_(native|erc20)_request_parts\s*\(/gm, "// DEF");
+const stripDefs = (src) =>
+  src.replace(/^\s*(pub\s+)?fn\s+from_(native|erc20)_request_parts\s*\(/gm, "// DEF");
+
+function statementAt(lines, i) {
+  let stmt = "";
+  for (let j = i; j < Math.min(i + 12, lines.length); j++) {
+    stmt += lines[j] + "\n";
+    if (lines[j].includes(";")) break;
+  }
+  return stmt;
 }
 
 function lintFile(path) {
-  const src = stripDefs(readFileSync(path, "utf8"));
-  const lines = src.split(/\r?\n/);
+  const lines = stripDefs(readFileSync(path, "utf8")).split(/\r?\n/);
   const findings = [];
+  const windowAt = (i) => lines.slice(i, Math.min(i + WINDOW, lines.length)).join("\n");
 
   lines.forEach((line, i) => {
-    if (!CTORS.some((c) => line.includes(c))) return;
     if (/^\s*\/\//.test(line) || /^\s*(pub\s+)?fn\s+/.test(line)) return;
 
-    // Collect the statement: from the call site forward until the first `;`.
-    let stmt = "";
-    for (let j = i; j < Math.min(i + 12, lines.length); j++) {
-      stmt += lines[j] + "\n";
-      if (lines[j].includes(";")) break;
+    // --- R1 ---
+    if (CTORS.some((c) => line.includes(c))) {
+      const stmt = statementAt(lines, i);
+      const lost = SIGNAL_LOST.find((re) => re.test(stmt));
+      const win = windowAt(i);
+      if (lost && !NARROWERS.some((n) => win.includes(n))) {
+        findings.push({
+          rule: "R1",
+          file: path, line: i + 1, code: line.trim(),
+          reason: `result consumed by ${/unwrap|expect/.test(String(lost)) ? "unwrap/expect" : "?"} with no Unrecognised/narrowing check within ${WINDOW} lines`,
+        });
+      }
+      return;
     }
-    // Window after the statement, where handling usually appears.
-    const window = lines.slice(i, Math.min(i + 18, lines.length)).join("\n");
 
-    const lostOn = SIGNAL_LOST.find((re) => re.test(stmt));
-    const handled = NARROWERS.some((n) => window.includes(n));
-    if (!lostOn || handled) return;
-
-    findings.push({
-      file: path,
-      line: i + 1,
-      code: line.trim(),
-      reason: `result consumed by ${String(lostOn).includes("unwrap") || String(lostOn).includes("expect") ? "unwrap/expect" : "?"} with no Unrecognised/narrowing check within 18 lines`,
-    });
+    // --- R2 ---
+    if (line.includes("into_raw()")) {
+      const win = windowAt(i);
+      if (!VALIDATORS.some((v) => win.includes(v))) {
+        findings.push({
+          rule: "R2",
+          file: path, line: i + 1, code: line.trim(),
+          reason: `raw struct obtained without re-validating the address (no len/validation marker within ${WINDOW} lines); into_raw() erases the Unrecognised discrimination`,
+        });
+      }
+    }
   });
   return findings;
 }
@@ -84,12 +112,12 @@ for (const r of roots) {
 }
 
 if (all.length === 0) {
-  console.log("clean: no un-narrowed from_*_request_parts call sites found");
+  console.log("clean: no R1/R2 findings");
   process.exit(0);
 }
-console.log(`review ${all.length} call site(s):\n`);
+console.log(`review ${all.length} finding(s):\n`);
 for (const f of all) {
-  console.log(`  ${relative(process.cwd(), f.file)}:${f.line}`);
+  console.log(`  [${f.rule}] ${relative(process.cwd(), f.file)}:${f.line}`);
   console.log(`    ${f.code}`);
   console.log(`    -> ${f.reason}\n`);
 }
