@@ -16,19 +16,24 @@
     "test:parser": "node test.mjs",
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
-    "conformance": "node conformance/run.mjs",
-    "test:all": "node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs",
+    "conformance": "node conformance/run.mjs && node conformance/vectors.run.mjs",
+    "test:all": "node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs",
     "lint:rust": "node tools/check_unrecognised.mjs tools/fixtures",
     "selfcheck": "node tools/check_unrecognised.mjs tools/fixtures",
-    "test:adversarial": "node adversarial.mjs"
+    "test:adversarial": "node adversarial.mjs",
+    "conformance:vectors": "node conformance/vectors.run.mjs",
+    "conformance:generated": "node conformance/gen_vectors.mjs",
+    "conformance:gen": "node conformance/gen_vectors.mjs"
   },
   "files": [
-    "eip681.mjs",
-    "deriveEip681.mjs",
-    "cli.mjs",
-    "vectors",
+    "LICENSE",
     "README.md",
-    "LICENSE"
+    "adversarial.mjs",
+    "cli.mjs",
+    "conformance",
+    "deriveEip681.mjs",
+    "eip681.mjs",
+    "vectors"
   ],
   "keywords": [
     "eip-681",

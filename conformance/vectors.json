@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "suite": "eip681-conformance",
+  "version": "1.0.0",
+  "spec": "https://eips.ethereum.org/EIPS/eip-681",
+  "description": "Language-agnostic EIP-681 conformance vectors. Expectations are authored from the EIP-681 specification text and from defects observed in real parsers; they are NOT generated from any single implementation's output. A conforming parser must reproduce `expect` for every case. Fields under `expect.fields` are checked only when ok is true.",
+  "fields_checked": {
+    "ok": "boolean — no errors present (warnings may exist)",
+    "error_codes": "array of strings — each MUST appear in the parser's error list when ok=false",
+    "warning_codes": "array of strings — each MUST appear in the warning list",
+    "fields": "semantic values that must match when ok=true: chainId (integer|null), amount (decimal string|null), recipient (lowercase hex or null), target (lowercase hex or null), isTokenTransfer (boolean)"
+  },
+  "notes": [
+    "C-* = address handling. S-* = structural. A-* = amount. T-* = token transfer. X-* = cross-cutting hazards."
+  ],
+  "vectors": [
+    {
+      "id": "S-01",
+      "why": "Baseline: the minimal well-formed native transfer.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": {
+        "ok": true,
+        "fields": { "chainId": 1, "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359", "amount": null, "isTokenTransfer": false }
+      }
+    },
+    {
+      "id": "S-02",
+      "why": "No scheme separator before the address: not a URI with a scheme at all.",
+      "input": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "expect": { "ok": false, "error_codes": ["no-scheme"] }
+    },
+    {
+      "id": "S-03",
+      "why": "EIP-681 fixes the scheme as 'ethereum'. A different one names a different payment system.",
+      "input": "bitcoin:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "expect": { "ok": false, "error_codes": ["bad-scheme"] }
+    },
+    {
+      "id": "S-04",
+      "why": "Empty string is not a URI.",
+      "input": "",
+      "expect": { "ok": false, "error_codes": ["empty"] }
+    },
+    {
+      "id": "S-05",
+      "why": "Scheme present but no target address.",
+      "input": "ethereum:",
+      "expect": { "ok": false, "error_codes": ["no-target"] }
+    },
+    {
+      "id": "S-06",
+      "why": "Scheme comparison is case-insensitive per RFC 3986; 'Ethereum:' names the same scheme.",
+      "input": "Ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": { "ok": true, "fields": { "chainId": 1 } }
+    },
+    {
+      "id": "S-07",
+      "why": "The 'pay-' prefix is deprecated but must still parse; ignoring it would make the parser reject a legal URI.",
+      "input": "ethereum:pay-0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": { "ok": true, "fields": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" } },
+      "warning_codes": ["pay-prefix"]
+    },
+    {
+      "id": "S-08",
+      "why": "Uppercase hex in the target body with no mixed case is not a checksum claim.",
+      "input": "ethereum:0xFB6916095CA1DF60BB79CE92CE3EA74C37C5D359@1",
+      "expect": { "ok": true, "fields": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" } }
+    },
+
+    {
+      "id": "C-01",
+      "why": "A 20-byte address is exactly 40 hex digits. This is the accepted baseline for every length case below.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": { "ok": true, "fields": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" } }
+    },
+    {
+      "id": "C-02",
+      "why": "39 digits = 19.5 bytes. Not an address.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d35@1",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "C-03",
+      "why": "REAL DEFECT CLASS: grammars written as a minimum (parse_min(40)) inherit no ceiling, so 41 digits reach the checksum step. Observed upstream: an over-length native recipient was returned as a valid ERC-55 address instead of rejected.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590@1",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "C-04",
+      "why": "42 digits — the single sample most length bugs are tested against; a 41..64 sweep catches what a lone 42 does not.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d35900@1",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "C-05",
+      "why": "48 digits — a common truncation/padding boundary in fixed-width encoders.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359000000000@1",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "C-06",
+      "why": "64 digits — exactly 32 bytes, so it fits a bytes32 slot and can survive a naive hex-to-bytes conversion.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359000000000000000000000000@1",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "C-07",
+      "why": "Mixed case IS an EIP-55 checksum claim. This is canonical vector #2 written with WRONG casing so the claim fails; accepting it means paying an address the string does not describe.",
+      "input": "ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": { "ok": false, "error_codes": ["bad-checksum"] }
+    },
+    {
+      "id": "C-08",
+      "why": "Canonical EIP-55 vector #2, correct casing. Must be accepted.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1",
+      "expect": { "ok": true, "fields": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" } }
+    },
+    {
+      "id": "C-09",
+      "why": "Canonical EIP-55 vector #1.",
+      "input": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed@1",
+      "expect": { "ok": true, "fields": { "target": "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" } }
+    },
+    {
+      "id": "C-10",
+      "why": "Canonical EIP-55 vector #3.",
+      "input": "ethereum:0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB@1",
+      "expect": { "ok": true, "fields": { "target": "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb" } }
+    },
+    {
+      "id": "C-11",
+      "why": "All-lowercase makes no checksum claim and must not be rejected — a parser that demands mixed case breaks most real QRs.",
+      "input": "ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1",
+      "expect": { "ok": true, "fields": { "target": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359" } }
+    },
+    {
+      "id": "C-12",
+      "why": "The zero address is syntactically valid and unrecoverable. Emitting it is always a bug; refusing is safer than warning.",
+      "input": "ethereum:0x0000000000000000000000000000000000000000@1",
+      "expect": { "ok": false, "error_codes": ["zero-address"] }
+    },
+
+    {
+      "id": "A-01",
+      "why": "EIP-681 spec example: scientific notation with a decimal mantissa, exact value required.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=2.014e18",
+      "expect": { "ok": true, "fields": { "amount": "2014000000000000000" } }
+    },
+    {
+      "id": "A-02",
+      "why": "Plain decimal integer.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=1000000000000000000",
+      "expect": { "ok": true, "fields": { "amount": "1000000000000000000" } }
+    },
+    {
+      "id": "A-03",
+      "why": "Base units are indivisible, so a fractional amount cannot be expressed. Silently truncating would pay a different number than written.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=1.5",
+      "expect": { "ok": false, "error_codes": ["amount-fractional"] }
+    },
+    {
+      "id": "A-04",
+      "why": "Negative amounts are meaningless in this scheme.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=-1",
+      "expect": { "ok": false, "error_codes": ["amount-invalid"] }
+    },
+    {
+      "id": "A-05",
+      "why": "uint256 maximum must survive without precision loss — the classic JSON float hazard.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "expect": { "ok": true, "fields": { "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935" } }
+    },
+    {
+      "id": "A-06",
+      "why": "A bare exponent with no mantissa is not a number.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=e18",
+      "expect": { "ok": false, "error_codes": ["amount-invalid"] }
+    },
+    {
+      "id": "A-07",
+      "why": "Empty value parameter.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=",
+      "expect": { "ok": false, "error_codes": ["amount-empty"] }
+    },
+    {
+      "id": "A-08",
+      "why": "EIP-155 chain ids start at 1. '@0' names a network that does not exist, so the destination is undefined.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@0",
+      "expect": { "ok": false, "error_codes": ["chain-id-zero"] }
+    },
+    {
+      "id": "A-09",
+      "why": "Chain id is present but empty.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@",
+      "expect": { "ok": false, "error_codes": ["empty-chain-id"] }
+    },
+    {
+      "id": "A-10",
+      "why": "A chain id beyond Number.MAX_SAFE_INTEGER cannot be represented exactly; accepting it risks silently changing the network.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@99999999999999999999999",
+      "expect": { "ok": false, "error_codes": ["chain-id-overflow"] }
+    },
+    {
+      "id": "A-11",
+      "why": "Missing chain id is legal per the grammar but hazardous: the same contract address exists on many chains. Must parse, and must be flagged.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359?value=1",
+      "expect": { "ok": true, "fields": { "chainId": null, "amount": "1" } },
+      "warning_codes": ["no-chain-id"]
+    },
+    {
+      "id": "A-12",
+      "why": "Hex chain id is a common extension and must be read as a number, not a string.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@0x89",
+      "expect": { "ok": true, "fields": { "chainId": 137 } }
+    },
+
+    {
+      "id": "T-01",
+      "why": "Canonical ERC-20 transfer. Target is the TOKEN CONTRACT; `address` is the human recipient.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000",
+      "expect": {
+        "ok": true,
+        "fields": {
+          "isTokenTransfer": true,
+          "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "recipient": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359",
+          "amount": "1000",
+          "chainId": 1
+        }
+      }
+    },
+    {
+      "id": "T-02",
+      "why": "HIGH-SEVERITY HAZARD: omitting uint256 is grammar-valid, but some parsers read it as a fixed zero transfer and others as an open-ended amount the user authorises. Must parse and must be flagged.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "expect": {
+        "ok": true,
+        "fields": { "isTokenTransfer": true, "amount": null },
+        "warning_codes": ["token-no-amount"]
+      }
+    },
+    {
+      "id": "T-03",
+      "why": "No recipient means the tokens have no destination that a wallet can show the user.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?uint256=1000",
+      "expect": { "ok": false, "error_codes": ["token-no-recipient"] }
+    },
+    {
+      "id": "T-04",
+      "why": "REAL DEFECT CLASS: a deposit QR that puts the ERC-20 CONTRACT in `address` makes any parser read the contract as the payee. A parser must not conflate target with recipient.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xdAC17F958D2ee523a2206206994597C13D831ec7&uint256=1000",
+      "expect": {
+        "ok": true,
+        "fields": {
+          "target": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "recipient": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        }
+      },
+      "note": "Legal but semantically identical target and recipient: the caller must be able to SEE that they are equal and decide. A parser that hides `target` makes this indistinguishable from T-01."
+    },
+    {
+      "id": "T-05",
+      "why": "`value` alongside `uint256` is ambiguous: to one parser the number is token base units, to another it is native currency. Two fields, one transfer, one of them silently ignored.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000&value=1",
+      "expect": {
+        "ok": false,
+        "error_codes": ["token-value-ambiguous"],
+        "fields": { "amount": null }
+      },
+      "note": "`amount` MUST be null here. When ok=false the ambiguous figure must not be exposed, or a caller testing `amount !== null` pays a silently chosen number."
+    },
+    {
+      "id": "T-06",
+      "why": "uint256 is only defined by EIP-681 inside /transfer. At the top level of a native request, and inside any other function, its meaning depends on an ABI the URI does not carry — so it must not be silently accepted as an amount.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?uint256=1000",
+      "expect": { "ok": false, "error_codes": ["uint256-without-transfer"] }
+    },
+    {
+      "id": "T-07",
+      "why": "An over-length address in `address=` (the recipient slot) is as dangerous as one in the target: 41 hex digits.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590&uint256=1000",
+      "expect": { "ok": false, "error_codes": ["bad-recipient"] }
+    },
+    {
+      "id": "T-08",
+      "why": "An over-length TOKEN CONTRACT address is the third call site of the same length check and the one most test suites omit.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec70@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000",
+      "expect": { "ok": false, "error_codes": ["bad-address"] }
+    },
+    {
+      "id": "T-09",
+      "why": "Recipient is the zero address — tokens are burned.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0x0000000000000000000000000000000000000000&uint256=1000",
+      "expect": { "ok": false, "error_codes": ["recipient-zero"] }
+    },
+    {
+      "id": "T-10",
+      "why": "A token transfer of exactly zero is legal but almost always a mistake; flag, do not reject.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=0",
+      "expect": {
+        "ok": true,
+        "fields": { "amount": "0" },
+        "warning_codes": ["token-amount-zero"]
+      }
+    },
+    {
+      "id": "T-11",
+      "why": "A mixed-case recipient with a failing checksum claim. Warning rather than error is the defensible choice here (the field is a parameter, not the target), but it must not pass silently.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000",
+      "expect": {
+        "ok": true,
+        "warning_codes": ["recipient-bad-checksum"]
+      }
+    },
+
+    {
+      "id": "X-01",
+      "why": "CROSS-CUTTING: the same address on two chains is two different accounts. A URI without a chain id that is fed to a wallet defaulting to the wrong network pays the wrong place.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000",
+      "expect": {
+        "ok": true,
+        "fields": { "chainId": null, "isTokenTransfer": true },
+        "warning_codes": ["no-chain-id"]
+      }
+    },
+    {
+      "id": "X-02",
+      "why": "Query parameters are separated by '&'. A parser that splits on the first '?' only, or that fails to stop at a fragment, mis-reads the amount.",
+      "input": "ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000&gas=21000",
+      "expect": {
+        "ok": true,
+        "fields": { "amount": "1000", "isTokenTransfer": true }
+      }
+    },
+    {
+      "id": "X-03",
+      "why": "Leading and trailing whitespace is common when a URI is extracted from a QR or a line of text; trimming is safe and must not change semantics.",
+      "input": "  ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1  ",
+      "expect": { "ok": true, "fields": { "chainId": 1 } }
+    },
+    {
+      "id": "X-04",
+      "why": "An APPROVAL is not a payment. EIP-681 defines uint256 only for /transfer, so inside /approve the number depends on an ABI the URI does not carry: refusing it is the safe behaviour. What must NOT happen is an approval being reported as a transfer.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/approve?spender=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000",
+      "expect": { "ok": false, "error_codes": ["uint256-without-transfer"] }
+    },
+    {
+      "id": "X-06",
+      "why": "The same approval-shaped URI WITHOUT uint256 must still parse, and must report isTokenTransfer=false. If every function collapsed to isTokenTransfer=true, an unlimited token approval would be shown to the user as an ordinary payment.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/approve?spender=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+      "expect": {
+        "ok": true,
+        "fields": { "isTokenTransfer": false, "amount": null }
+      }
+    },
+    {
+      "id": "X-05",
+      "why": "A 41-digit token address plus a 41-digit recipient: two independent length failures. Reporting only the first hides the second.",
+      "input": "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec70@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590&uint256=1000",
+      "expect": {
+        "ok": false,
+        "error_codes": ["bad-address", "bad-recipient"]
+      }
+    }
+  ]
+}

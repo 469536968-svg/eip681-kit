@@ -22,6 +22,92 @@ v.amount        // 1000000n  (bigint, exact)
 v.warnings      // []  — or the specific hazards found
 ```
 
+## Language-agnostic conformance corpus
+
+`conformance/vectors.json` is a **portable** EIP-681 conformance suite: 49 cases with their
+expected result, usable by any implementation in any language, not just this one.
+
+The expectations were authored from the EIP-681 specification text and from defects
+observed in real parsers — **not generated from this parser's output**. Had they been
+derived from the implementation they would be a tautology and would prove nothing.
+
+```
+npm run conformance           # differential vs measured librustzcash  +  the 49 vectors
+npm run conformance:vectors   # just the portable vectors
+npm run conformance:generated # regenerate the TSV / NDJSON from vectors.json
+```
+
+`conformance/HOWTO.md` documents the five satisfaction rules and, more usefully, **which
+case catches which class of real bug** — so a failing case in your CI names its own
+regression instead of just going red. `vectors.tsv` and `vectors.ndjson` are generated
+from the single source of truth for harnesses that would rather not parse JSON.
+
+### The corpus is falsifiable — two negative controls, both executed
+
+A test suite that has never been seen to fail is decoration. Reverting the fixes makes it fail,
+and *how* it fails is the point:
+
+| Control | Result |
+|---|---|
+| Reintroduce the `token-value-ambiguous` amount leak | `T-05` fails: `amount on a FAILED parse: expected null got 1000` |
+| Relax the address length check from `{40}` to `{40,64}` (a minimum, not a width) | 7 vectors fail — `C-03..C-06` report **`bad-checksum` where `bad-address` is required** |
+
+That second failure text is the important one: it reproduces, in JavaScript, the exact
+defect class found in `zcash/librustzcash` `components/eip681`, where an over-length
+address falls through to the checksum step instead of being refused for its length.
+
+## Portable conformance corpus (language-agnostic)
+
+`conformance/vectors.json` — **49 hand-authored EIP-681 vectors**, written from the
+spec text and from defects seen in real parsers. They are explicitly **not** generated
+from this parser's output: a suite derived from its own implementation is a tautology.
+
+It is meant to be run against *other* parsers. `conformance/HOWTO.md` states the exact
+contract (what `ok`, `error_codes`, `warning_codes` and each semantic field mean), and
+`conformance/vectors.tsv` / `.ndjson` are generated so a Rust, Go, Python or Swift
+wallet can consume the same expectations without re-typing them.
+
+```
+npm run conformance        # runs both suites
+npm run conformance:gen    # regenerate the TSV/NDJSON from vectors.json
+```
+
+### The bug classes the corpus is designed to catch
+
+| Cases | Class |
+|---|---|
+| `C-02`..`C-06` | **Address length written as a minimum, so it has no ceiling.** 41..64 digits then reach the checksum step and surface as `bad-checksum` instead of a length error. This is the defect observed in `librustzcash` `components/eip681` (issue #3061). |
+| `C-07` | Any mixed case accepted without verifying the EIP-55 claim. |
+| `C-11` | The opposite failure: demanding mixed case, rejecting ordinary lowercase QRs. |
+| `T-02` | `/transfer` with no `uint256` read as an open-ended transfer. |
+| `T-04` | Conflating the token **contract** with the **recipient** — the classic broken deposit QR. |
+| `T-05` | **Exposing an ambiguous amount on a failed parse.** |
+| `T-08` | Length-checking the recipient but not the token contract. |
+| `X-06` | Reporting a token **approval** as a payment. |
+| `A-05` | uint256 precision loss through a float or a 53-bit integer. |
+| `X-01` | Silent mainnet/testnet mixup when the chain id is absent. |
+
+### Every case is falsifiable — negative controls, executed
+
+A corpus nobody has ever failed proves nothing. Two deliberate regressions were
+introduced into the parser and the corpus was re-run:
+
+| Regression introduced | Corpus result |
+|---|---|
+| Re-expose the amount on `T-05` (remove the guard) | **48/49** — fails `T-05`: `amount on a FAILED parse: expected null got 1000` |
+| Relax the address checks from exact-40 to minimum-40 | **42/49** — fails `C-03`..`C-06`, `T-08`, `X-05`, reproducing the upstream defect: `missing error code "bad-address" (have: bad-checksum)` |
+
+With both regressions removed the corpus is **49/49**.
+
+Two independent suites now run side by side, and they check different things:
+
+- `conformance/run.mjs` — **differential**. 100 cases comparing this parser against
+  length behaviour *measured* from `librustzcash` `components/eip681` @ `7a2504de3c`
+  with PR #3062 applied (`cargo test`). Two independent implementations agreeing is
+  evidence; one agreeing with itself is not.
+- `conformance/vectors.run.mjs` — **absolute**. 49 cases with expectations authored
+  from the spec, portable to any language.
+
 ## Red-team conformance corpus
 
 `adversarial.mjs` is not a self-agreement suite. Every case in it is an input that
