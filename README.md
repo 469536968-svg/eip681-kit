@@ -91,6 +91,51 @@ npm run conformance        # runs both suites
 npm run conformance:gen    # regenerate the TSV/NDJSON from vectors.json
 ```
 
+## Install and use
+
+```js
+import { parse, erc20Transfer, nativeTransfer } from 'eip681-kit';
+
+const r = parse('ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB691...d359&uint256=1000');
+if (r.ok) {
+  r.target;        // '0xdAC17F958D2ee523a2206206994597C13D831ec7'  the ERC-20 contract
+  r.recipient;     // '0xfB691...d359'                              the payee (never the contract)
+  r.amount;        // 1000n — exact base units, a bigint
+  r.warnings;      // e.g. token-no-amount; valid but unsafe to hand to a third-party parser
+}
+```
+
+TypeScript declarations ship alongside (`index.d.ts`, generated — see below). No build
+step, no bundler, no dependencies.
+
+### Building a request
+
+```js
+erc20Transfer({ chainId: 1, token: CONTRACT, to: PAYEE, amount: 1000n });
+// -> { ok: true, errors: [], uri: 'ethereum:0x…@1/transfer?address=0x…&uint256=1000' }
+
+erc20Transfer({ chainId: 1, token: 'nope', to: 'x', amount: 1n });
+// -> { ok: false, errors: [...], uri: null }   never a URI you could sign by accident
+```
+
+### Why `ok` and not `amount !== null`
+
+This is the kit's central rule. On a **failed** parse every semantic field is `null`,
+including `amount`. A caller who tests `if (result.amount !== null)` instead of
+`if (result.ok)` cannot pay a silently chosen number — the ambiguity that
+`token-value-ambiguous` exists to report is not hidden behind a populated field.
+The conformance harness enforces this for *any* adapter, not just this parser.
+
+### Generated types, not hand-written ones
+
+`index.d.ts` is produced by `npm run build:types`, which reads the actual export
+statements and **aborts the build on any export it has no declaration for**. That was
+not hypothetical: the first run failed and named `erc20Transfer` and `nativeTransfer` —
+two real public functions a hand-written `.d.ts` would have omitted, leaving TypeScript
+consumers with a green build and a broken runtime. A second check aborts if the entry
+point re-exports a name the module does not export. `npm run test:types` then verifies
+the declarations and the runtime agree in both directions.
+
 ### Run the corpus against *your* parser
 
 The corpus is only worth anything if it can be pointed at an implementation that is not

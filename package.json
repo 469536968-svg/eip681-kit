@@ -3,13 +3,16 @@
   "version": "1.1.0",
   "description": "Strict EIP-681 payment URI parser, validator, formatter and CLI. Zero dependencies.",
   "type": "module",
-  "main": "eip681.mjs",
+  "main": "index.mjs",
   "bin": {
     "eip681": "./cli.mjs"
   },
   "exports": {
-    ".": "./eip681.mjs",
-    "./derive": "./deriveEip681.mjs"
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
   },
   "scripts": {
     "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs",
@@ -17,7 +20,7 @@
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
     "conformance": "node conformance/run.mjs && node conformance/vectors.run.mjs",
-    "test:all": "node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs && node tools/build_conformance_page.mjs && node tools/verify_conformance_page.mjs && node conformance/check.mjs conformance/adapters/kit.mjs",
+    "test:all": "node tools/build_types.mjs && node types.test.mjs && node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs && node tools/verify_conformance_page.mjs && node conformance/check.mjs conformance/adapters/kit.mjs",
     "lint:rust": "node tools/check_unrecognised.mjs tools/fixtures",
     "selfcheck": "node tools/check_unrecognised.mjs tools/fixtures",
     "test:adversarial": "node adversarial.mjs",
@@ -26,7 +29,9 @@
     "conformance:gen": "node conformance/gen_vectors.mjs",
     "conformance:page": "node tools/build_conformance_page.mjs && node tools/verify_conformance_page.mjs",
     "conformance:check": "node conformance/check.mjs conformance/adapters/kit.mjs",
-    "conformance:check:naive": "node conformance/check.mjs conformance/adapters/naive.mjs"
+    "conformance:check:naive": "node conformance/check.mjs conformance/adapters/naive.mjs",
+    "build:types": "node tools/build_types.mjs",
+    "test:types": "node types.test.mjs"
   },
   "files": [
     "LICENSE",
@@ -36,7 +41,9 @@
     "conformance",
     "deriveEip681.mjs",
     "eip681.mjs",
-    "vectors"
+    "vectors",
+    "index.mjs",
+    "index.d.ts"
   ],
   "keywords": [
     "eip-681",
@@ -54,5 +61,6 @@
   "license": "MIT",
   "engines": {
     "node": ">=18"
-  }
+  },
+  "types": "index.d.ts"
 }
