@@ -2,128 +2,578 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EIP-681 Conformance Corpus</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EIP-681 conformance runner — 49 vectors, offline</title>
 <style>
-  :root { --bg:#0e1116; --fg:#e6edf3; --dim:#8b949e; --ok:#3fb950; --bad:#f85149; --line:#21262d; --card:#161b22; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-  header { padding:28px 20px 12px; max-width:980px; margin:0 auto; }
-  h1 { font-size:19px; margin:0 0 6px; }
-  .sub { color:var(--dim); font-size:13px; }
-  .stat { margin:16px 0; font-size:15px; }
-  .stat b { font-size:22px; }
-  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin:6px 0 22px; }
-  .bar > i { display:block; height:100%; background:var(--ok); width:0; transition:width .4s; }
-  main { max-width:980px; margin:0 auto; padding:0 20px 64px; }
-  .v { border:1px solid var(--line); background:var(--card); border-radius:8px; margin:0 0 12px; padding:13px 15px; }
-  .v.pass { border-left:3px solid var(--ok); }
-  .v.fail { border-left:3px solid var(--bad); }
-  .v h2 { font-size:13.5px; margin:0 0 6px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
-  .badge { font-size:11px; padding:1px 7px; border-radius:10px; border:1px solid var(--line); }
-  .pass .badge { color:var(--ok); border-color:#238636; }
-  .fail .badge { color:var(--bad); border-color:#a11; }
-  .kind { color:var(--dim); font-size:11px; }
-  code.uri { display:block; background:#0b0f14; border:1px solid var(--line); border-radius:5px; padding:8px 10px; margin:7px 0; font-size:12.5px; overflow-x:auto; white-space:pre; }
-  .why { color:var(--dim); font-size:12.5px; margin:8px 0 0; }
-  .why b { color:#e6edf3; font-weight:600; }
-  .prob { color:var(--bad); font-size:12.5px; margin:5px 0 0; }
-  footer { max-width:980px; margin:0 auto; padding:0 20px 60px; color:var(--dim); font-size:12px; }
-  a { color:#58a6ff; }
-  .note { border-left:2px solid var(--line); padding-left:12px; margin:20px 0; color:var(--dim); font-size:12.5px; }
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2rem 1.25rem; background: #0d1117; color: #e6edf3;
+         font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  main { max-width: 940px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 .35rem; }
+  h2 { font-size: 1rem; margin: 2rem 0 .6rem; color: #e6edf3; }
+  p.sub { color: #8b949e; margin: 0 0 1.5rem; }
+  a { color: #58a6ff; }
+  .big { font-size: 1.7rem; font-weight: 700; margin: 1rem 0 .25rem; }
+  .pass { color: #3fb950; } .fail { color: #f85149; }
+  table { width: 100%; border-collapse: collapse; margin-top: .5rem; font-size: 13px; }
+  th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid #21262d;
+           vertical-align: top; }
+  th { color: #8b949e; font-weight: 600; }
+  tr.bad td { background: #2d1214; }
+  .pill { display: inline-block; padding: .05rem .45rem; border-radius: 999px;
+          font-size: 11px; border: 1px solid #30363d; color: #8b949e; }
+  code { background: #161b22; padding: .1rem .35rem; border-radius: 4px; }
+  textarea { width: 100%; min-height: 4.2rem; background: #161b22; color: #e6edf3;
+             border: 1px solid #30363d; border-radius: 6px; padding: .6rem; font: inherit; }
+  button { background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+           border-radius: 6px; padding: .5rem 1rem; font: inherit; cursor: pointer; }
+  button:hover { background: #30363d; }
+  pre { background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+        padding: .8rem; overflow-x: auto; font-size: 13px; }
+  .muted { color: #8b949e; }
 </style>
 </head>
 <body>
-<header>
-  <h1>EIP-681 Conformance Corpus</h1>
-  <div class="sub">Runs live in your browser against <code>eip681.mjs</code>. No server, no tracking, no network calls.</div>
-  <div class="stat" id="stat">running&hellip;</div>
-  <div class="bar"><i id="bar"></i></div>
-</header>
-<main id="out"></main>
-<footer>
-  <div class="note">
-    Vectors are traceable to (A) the EIP-681 spec text, (B) official Keccak-256 vectors,
-    (C) the four canonical EIP-55 checksum vectors &mdash; not to "whatever this parser happens to do".
-    The corpus is the point: the failure modes that cost users money are not in the happy path.
-    Run the same suite against your own parser with <code>node run-conformance.mjs ./your-parser.mjs</code>.
-  </div>
-  <div id="src"></div>
-</footer>
+<main>
+  <h1>EIP-681 conformance runner</h1>
+  <p class="sub">
+    49 vectors, hand-authored from the
+    <a href="https://eips.ethereum.org/EIPS/eip-681">EIP-681 specification</a> and from defects
+    observed in real parsers. Runs entirely in this page — no network, no build step.
+  </p>
+
+  <div id="summary" class="big">running…</div>
+  <p class="muted" id="sub"></p>
+
+  <h2>Vectors</h2>
+  <p class="muted">A failing row means the parser in this page disagrees with the spec-derived
+  expectation. That is the point: the corpus is falsifiable.</p>
+  <table>
+    <thead><tr><th>id</th><th>verdict</th><th>input</th><th>detail</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <h2>Try your own URI</h2>
+  <textarea id="in" spellcheck="false">ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000</textarea>
+  <p><button id="go">Parse</button></p>
+  <pre id="out">—</pre>
+
+  <h2>What this catches</h2>
+  <p class="muted">
+    The address-length cases exist because a grammar written as a <em>minimum</em> has no
+    ceiling: 41–64 hex digits then reach the checksum step and get reported as a checksum
+    problem rather than a length problem. That is a real defect observed in
+    <code>librustzcash</code> <code>components/eip681</code>.
+    <code>T-05</code> checks the subtlest one: when a parse fails, it must expose
+    <em>no</em> amount, or a caller testing <code>amount !== null</code> pays a silently
+    chosen number.
+  </p>
+</main>
 
 <script type="module">
-import { parse } from './eip681.mjs';
+// ===== inlined parser (generated from eip681.mjs — do not edit here) =====
+// eip681.mjs — strict EIP-681 payment-request URI parser, validator and formatter.
+// Zero dependencies. Pure ES module. Runs in Node >= 18 and in browsers.
+//
+// Why this exists: the token-transfer form of EIP-681 is easy to emit and easy to
+// get subtly wrong. A URI that names an ERC-20 contract but omits `uint256` is
+// parsed by some wallets as an *open-ended* transfer the user fills in, and by
+// others as a fixed transfer of zero. A URI with no chain id is ambiguous the
+// moment the same contract address exists on two chains. This module refuses to
+// guess: it reports errors for malformed input and warnings for every input that
+// is technically valid but dangerous to hand to a third-party parser.
+//
+// Spec: https://eips.ethereum.org/EIPS/eip-681
 
-const out = document.getElementById('out');
-const stat = document.getElementById('stat');
-const bar = document.getElementById('bar');
-const src = document.getElementById('src');
+const SCHEME = 'ethereum';
+const ERC20_TRANSFER = 'transfer';
 
-let suite;
-try {
-  const r = await fetch('./vectors/eip681.conformance.json', { cache: 'no-store' });
-  suite = await r.json();
-} catch (e) {
-  out.innerHTML = `<div class="v fail"><h2>Could not load vectors</h2><p class="why">${e.message}<br>
-    Serve this page over HTTP (e.g. <code>python -m http.server</code>) &mdash; <code>fetch</code> is blocked on <code>file://</code>.</p></div>`;
-  stat.textContent = 'error'; throw e;
+const ADDRESS_RE = /^(pay-)?(0x[0-9a-fA-F]{40})$/;
+const CHAIN_DEC_RE = /^[0-9]+$/;
+const CHAIN_HEX_RE = /^0x[0-9a-fA-F]+$/;
+const FUNCTION_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const UINT_RE = /^[0-9]+(?:\.[0-9]+)?(?:e[0-9]+)?$/i;
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+function err(code, message) { return { code, message }; }
+function warn(code, message) { return { code, message }; }
+
+/**
+ * Parse an amount like "1000", "1e18", "0x2a" into a bigint of base units.
+ * EIP-681 permits decimal integers and scientific notation; the hex form is a
+ * common extension, so it is accepted but flagged by the caller, not here.
+ * Returns { ok, value, errors }.
+ */
+function parseAmount(raw) {
+  const errors = [];
+  if (typeof raw !== 'string' || raw === '') {
+    return { ok: false, value: null, errors: [err('amount-empty', 'amount is empty')] };
+  }
+  const hex = /^0x[0-9a-fA-F]+$/.test(raw);
+  if (hex) return { ok: true, value: BigInt(raw), errors: [] };
+  if (!UINT_RE.test(raw)) {
+    return { ok: false, value: null, errors: [err('amount-invalid', `amount is not a non-negative integer or scientific notation: ${raw}`)] };
+  }
+  const [mantissa, exp] = raw.toLowerCase().split('e');
+  const e = exp === undefined ? 0 : Number(exp);
+
+  // A mantissa may carry a decimal point ("2.014e18"), which appears verbatim in
+  // the EIP-681 spec text. Let the fraction contribute digits and reduce the
+  // exponent by its length, so 2.014e18 == 2014 * 10^15 exactly.
+  const dot = mantissa.indexOf('.');
+  let digits = mantissa, shift = e;
+  if (dot >= 0) {
+    const frac = mantissa.slice(dot + 1);
+    digits = mantissa.slice(0, dot) + frac;
+    shift = e - frac.length;
+  }
+  if (digits === '' || !/^[0-9]+$/.test(digits)) {
+    return { ok: false, value: null, errors: [err('amount-invalid', `amount is not a non-negative integer or scientific notation: ${raw}`)] };
+  }
+  let v = BigInt(digits);
+  if (shift >= 0) {
+    v *= 10n ** BigInt(shift);
+  } else {
+    const d = 10n ** BigInt(-shift);
+    if (v % d !== 0n) {
+      // e.g. "1.5" base units. Base units are indivisible, so this is not an amount.
+      return { ok: false, value: null, errors: [err('amount-fractional', `amount is not a whole number of base units: ${raw}`)] };
+    }
+    v /= d;
+  }
+  return { ok: true, value: v, errors };
 }
 
-const norm = x => typeof x === 'bigint' ? x.toString() : x;
-const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = x; return n; };
+/** EIP-55 checksum. Kept local so the module has no dependencies. */
+const KECCAK_RC = [
+  0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+  0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+  0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+  0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+  0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+  0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n,
+];
+const KECCAK_ROT = [
+  [0, 36, 3, 41, 18], [1, 44, 10, 45, 2], [62, 6, 43, 15, 61],
+  [28, 55, 25, 21, 56], [27, 20, 39, 8, 14],
+];
+const MASK64 = 0xffffffffffffffffn;
 
-let pass = 0, fail = 0;
+function rotl64(x, n) {
+  if (n === 0) return x & MASK64;
+  return ((x << BigInt(n)) | (x >> BigInt(64 - n))) & MASK64;
+}
 
-for (const v of suite.vectors) {
-  const got = parse(v.uri);
-  const problems = [];
+function keccak256(bytes) {
+  const rate = 136; // 1088 bits
+  const st = [];
+  for (let i = 0; i < 25; i++) st.push(0n);
 
-  if (v.accept) {
-    if (!got.ok) problems.push('expected ACCEPT, got reject: ' + JSON.stringify(got.errors));
-    for (const [k, want] of Object.entries(v.expect || {})) {
-      const g = got[k];
-      if (k === 'params') {
-        for (const [ak, av] of Object.entries(want))
-          if (norm(g?.[ak]) !== norm(av)) problems.push(`params.${ak}: got ${JSON.stringify(norm(g?.[ak]))}, want ${JSON.stringify(av)}`);
-      } else if (k === 'chainId' && want === null) {
-        if (g !== null && g !== undefined) problems.push(`chainId: got ${JSON.stringify(g)} \u2014 absent must stay absent, never guessed as 1`);
-      } else if (norm(g) !== norm(want)) {
-        problems.push(`${k}: got ${JSON.stringify(norm(g))}, want ${JSON.stringify(want)}`);
+  const padLen = rate - (bytes.length % rate);
+  const padded = new Uint8Array(bytes.length + padLen);
+  padded.set(bytes);
+  padded[bytes.length] |= 0x01;
+  padded[padded.length - 1] |= 0x80;
+
+  for (let off = 0; off < padded.length; off += rate) {
+    for (let i = 0; i < rate / 8; i++) {
+      let lane = 0n;
+      for (let b = 0; b < 8; b++) lane |= BigInt(padded[off + i * 8 + b]) << BigInt(8 * b);
+      st[i] ^= lane;
+    }
+    // Keccak-f[1600]: 24 rounds
+    for (let round = 0; round < 24; round++) {
+      // theta
+      const c = [], d = [];
+      for (let x = 0; x < 5; x++) c[x] = st[x] ^ st[x + 5] ^ st[x + 10] ^ st[x + 15] ^ st[x + 20];
+      for (let x = 0; x < 5; x++) d[x] = c[(x + 4) % 5] ^ rotl64(c[(x + 1) % 5], 1);
+      for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) st[x + 5 * y] ^= d[x];
+      // rho + pi
+      const b = new Array(25);
+      for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) {
+        b[y + 5 * ((2 * x + 3 * y) % 5)] = rotl64(st[x + 5 * y], KECCAK_ROT[x][y]);
+      }
+      // chi
+      for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) {
+        st[x + 5 * y] = b[x + 5 * y] ^ ((~b[(x + 1) % 5 + 5 * y] & MASK64) & b[(x + 2) % 5 + 5 * y]);
+      }
+      // iota
+      st[0] ^= KECCAK_RC[round];
+    }
+  }
+
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 4; i++) {
+    let lane = st[i];
+    for (let b = 0; b < 8; b++) { out[i * 8 + b] = Number(lane & 0xffn); lane >>= 8n; }
+  }
+  return out;
+}
+
+/** EIP-55 mixed-case checksum of a 20-byte address. */
+function toChecksumAddress(addr) {
+  const lower = addr.toLowerCase().replace(/^0x/, '');
+  const hash = keccak256(new TextEncoder().encode(lower));
+  let out = '0x';
+  for (let i = 0; i < lower.length; i++) {
+    const nibble = (hash[Math.floor(i / 2)] >> (i % 2 === 0 ? 4 : 0)) & 0x0f;
+    out += nibble >= 8 ? lower[i].toUpperCase() : lower[i];
+  }
+  return out;
+}
+
+/** True when addr is a correct EIP-55 checksum (or all-lowercase/all-uppercase). */
+function isChecksumAddress(addr) {
+  const body = addr.replace(/^0x/, '');
+  if (!/^[0-9a-fA-F]{40}$/.test(body)) return false;
+  if (body === body.toLowerCase() || body === body.toUpperCase()) return true;
+  return toChecksumAddress(addr) === '0x' + body;
+}
+
+/**
+ * Parse an EIP-681 URI.
+ * Returns:
+ *   {
+ *     ok: boolean,              // no errors (warnings may still be present)
+ *     scheme, target, chainId, functionName, params,
+ *     isTokenTransfer, recipient, amount (bigint|null),
+ *     errors: [{code,message}], warnings: [{code,message}],
+ *     canonical: string|null
+ *   }
+ */
+function parse(uri) {
+  const errors = [];
+  const warnings = [];
+  const out = {
+    ok: false, scheme: null, target: null, chainId: null, functionName: null,
+    params: {}, isTokenTransfer: false, recipient: null, amount: null,
+    errors, warnings, canonical: null,
+  };
+
+  if (typeof uri !== 'string' || uri.trim() === '') {
+    errors.push(err('empty', 'URI is empty'));
+    return out;
+  }
+  const raw = uri.trim();
+  const colon = raw.indexOf(':');
+  if (colon < 0) {
+    errors.push(err('no-scheme', 'URI has no scheme; expected "ethereum:"'));
+    return out;
+  }
+  const scheme = raw.slice(0, colon);
+  if (scheme.toLowerCase() !== SCHEME) {
+    errors.push(err('bad-scheme', `unsupported scheme "${scheme}"; EIP-681 uses "${SCHEME}"`));
+    return out;
+  }
+  out.scheme = scheme.toLowerCase();
+
+  let rest = raw.slice(colon + 1);
+  let query = '';
+  const q = rest.indexOf('?');
+  if (q >= 0) { query = rest.slice(q + 1); rest = rest.slice(0, q); }
+
+  let head = rest, fn = '';
+  const slash = rest.indexOf('/');
+  if (slash >= 0) { head = rest.slice(0, slash); fn = rest.slice(slash + 1); }
+
+  // --- target [@chainId] ---
+  let targetRaw = head, chainRaw = null;
+  const at = head.indexOf('@');
+  if (at >= 0) { targetRaw = head.slice(0, at); chainRaw = head.slice(at + 1); }
+
+  if (targetRaw === '') {
+    errors.push(err('no-target', 'URI has no target address'));
+  } else {
+    const m = ADDRESS_RE.exec(targetRaw);
+    if (!m) {
+      errors.push(err('bad-address', `target is not a 20-byte hex address: ${targetRaw}`));
+    } else {
+      if (m[1]) warnings.push(warn('pay-prefix', 'the deprecated "pay-" address prefix is present; plain addresses are preferred'));
+      out.target = m[2];
+      {
+        const body = out.target.replace(/^0x/, '');
+        const mixedCase = /[A-F]/.test(body) && /[a-z]/.test(body);
+        if (mixedCase && !isChecksumAddress(out.target)) {
+          // Mixed case is an explicit EIP-55 claim. If the claim fails, the string
+          // does not describe the address it appears to: refuse rather than pay it.
+          errors.push(err('bad-checksum', `target has mixed case that FAILS its EIP-55 checksum: ${out.target}`));
+        }
+      }
+      if (out.target.toLowerCase() === ZERO_ADDRESS) {
+        errors.push(err('zero-address', 'target is the zero address; funds sent to it are unrecoverable'));
       }
     }
+  }
+
+  if (chainRaw !== null) {
+    if (chainRaw === '') {
+      errors.push(err('empty-chain-id', 'chain id is empty after "@"'));
+    } else if (CHAIN_DEC_RE.test(chainRaw)) {
+      out.chainId = Number(chainRaw);
+      if (!Number.isSafeInteger(out.chainId)) {
+        errors.push(err('chain-id-overflow', `chain id is not a safe integer: ${chainRaw}`));
+        out.chainId = null;
+      } else if (out.chainId === 0) {
+        // EIP-155 chain ids start at 1. "@0" is not a chain, and a wallet that
+        // reads it as "chain 0" has no network to send on. Refuse rather than
+        // accept a URI whose destination does not exist.
+        errors.push(err('chain-id-zero', 'chain id 0 is not a valid EIP-155 chain id'));
+        out.chainId = null;
+      }
+    } else if (CHAIN_HEX_RE.test(chainRaw)) {
+      out.chainId = Number(BigInt(chainRaw));
+      warnings.push(warn('hex-chain-id', 'chain id is hex; decimal is the canonical form'));
+    } else {
+      errors.push(err('bad-chain-id', `chain id is neither decimal nor hex: ${chainRaw}`));
+    }
   } else {
-    if (got.ok) problems.push('expected REJECT, got accept');
-    if (v.expect_error) {
-      const codes = (got.errors || []).map(e => e.code);
-      if (!codes.includes(v.expect_error)) problems.push(`expected error '${v.expect_error}', got ${JSON.stringify(codes)}`);
+    warnings.push(warn('no-chain-id', 'no chain id (@) present; the same address can exist on multiple chains, so a wallet may pick the wrong one'));
+  }
+
+  // --- /functionName ---
+  if (slash >= 0) {
+    if (fn === '') {
+      errors.push(err('empty-function', 'trailing "/" with no function name'));
+    } else if (!FUNCTION_RE.test(fn)) {
+      errors.push(err('bad-function', `function name is not a bare identifier: ${fn}`));
+    } else {
+      out.functionName = fn;
     }
   }
 
-  const ok = problems.length === 0;
-  ok ? pass++ : fail++;
-
-  const card = el('div', 'v ' + (ok ? 'pass' : 'fail'));
-  const h = el('h2');
-  h.append(el('span', 'badge', ok ? 'PASS' : 'FAIL'), el('span', null, v.id),
-           el('span', 'kind', v.accept ? 'must accept' : 'must reject'));
-  card.append(h, el('code', 'uri', v.uri));
-  if (v.why) {
-    const w = el('p', 'why');
-    // bold the lead-in sentence up to the first period+space, keep the rest plain
-    const m = v.why.match(/^([^.]+\.)\s*([\s\S]*)$/);
-    if (m) { w.append(el('b', null, m[1] + ' '), document.createTextNode(m[2])); }
-    else w.textContent = v.why;
-    card.append(w);
+  // --- query params ---
+  if (query !== '') {
+    for (const part of query.split('&')) {
+      if (part === '') {
+        errors.push(err('empty-param', 'query string contains an empty parameter'));
+        continue;
+      }
+      const eq = part.indexOf('=');
+      const keyRaw = eq < 0 ? part : part.slice(0, eq);
+      const valRaw = eq < 0 ? '' : part.slice(eq + 1);
+      const key = keyRaw.toLowerCase();
+      if (key === '') { errors.push(err('empty-param-name', 'a parameter has no name')); continue; }
+      if (Object.prototype.hasOwnProperty.call(out.params, key)) {
+        errors.push(err('duplicate-param', `parameter "${key}" appears more than once; parsers disagree on which wins`));
+        continue;
+      }
+      out.params[key] = decodeURIComponent(valRaw.replace(/\+/g, ' '));
+    }
   }
-  for (const p of problems) card.append(el('p', 'prob', '\u2716 ' + p));
-  out.append(card);
+
+  const isTransfer = out.functionName !== null && out.functionName.toLowerCase() === ERC20_TRANSFER;
+  out.isTokenTransfer = isTransfer;
+
+  if (Object.prototype.hasOwnProperty.call(out.params, 'address')) {
+    const to = out.params.address;
+    if (!/^0x[0-9a-fA-F]{40}$/.test(to)) {
+      errors.push(err('bad-recipient', `recipient is not a 20-byte hex address: ${to}`));
+    } else {
+      out.recipient = to;
+      if (!isChecksumAddress(to)) {
+        warnings.push(warn('recipient-bad-checksum', `recipient has an invalid EIP-55 checksum: ${to}`));
+      }
+      if (to.toLowerCase() === ZERO_ADDRESS) {
+        errors.push(err('recipient-zero', 'recipient is the zero address; funds sent to it are unrecoverable'));
+      }
+    }
+  }
+
+  if (isTransfer) {
+    // Token transfer form: target is the ERC-20 contract, parameters are
+    // address + uint256. A bare `value` here is intentionally rejected: the
+    // number would mean base units of the token to some parsers and native
+    // currency to others.
+    if (!out.params.address) {
+      errors.push(err('token-no-recipient', 'token transfer has no "address" parameter; the recipient is unspecified'));
+    }
+    if (!Object.prototype.hasOwnProperty.call(out.params, 'uint256')) {
+      // Valid per the grammar, but hazardous: a partial parser can read this as
+      // an open-ended transfer the user authorises manually.
+      warnings.push(warn('token-no-amount', 'token transfer omits "uint256"; partial parsers may treat this as an open-ended transfer to be filled in by the user'));
+    }
+    if (Object.prototype.hasOwnProperty.call(out.params, 'value')) {
+      errors.push(err('token-value-ambiguous', 'token transfer also carries "value", which is ambiguous between native and token units'));
+    }
+    if (out.params.uint256 !== undefined) {
+      const a = parseAmount(out.params.uint256);
+      if (!a.ok) errors.push(...a.errors);
+      else if (out.params.value === undefined) {
+        out.amount = a.value;
+        if (a.value === 0n) warnings.push(warn('token-amount-zero', 'token amount is zero'));
+        if (/^0x/i.test(out.params.uint256)) warnings.push(warn('hex-amount', 'amount is hex; decimal is the canonical form for uint256'));
+      }
+      // When `value` is also present the amount is already an error
+      // (token-value-ambiguous). Do NOT surface a number that the module has just
+      // declared ambiguous: a consumer reading `amount !== null` instead of `ok`
+      // would otherwise take a silently chosen figure. An erroring parse must not
+      // carry any field that a caller could mistake for a decision.
+    }
+  } else if (Object.prototype.hasOwnProperty.call(out.params, 'uint256')) {
+    errors.push(err('uint256-without-transfer', '"uint256" is only meaningful on a /transfer function'));
+  }
+
+  if (!isTransfer && out.params.value !== undefined) {
+    const a = parseAmount(out.params.value);
+    if (!a.ok) errors.push(...a.errors);
+    else {
+      out.amount = a.value;
+      if (a.value === 0n) warnings.push(warn('value-zero', 'native amount is zero'));
+      if (/^0x/i.test(out.params.value)) warnings.push(warn('hex-amount', 'amount is hex; decimal is the canonical form'));
+    }
+  }
+
+  // unknown params left in place; they are legal extensions per the spec
+  out.ok = errors.length === 0;
+  try { out.canonical = out.ok ? format(out) : null; } catch { out.canonical = null; }
+  return out;
 }
 
-stat.innerHTML = `<b>${pass}/${pass + fail}</b> vectors passed &nbsp;<span style="color:var(--dim)">(suite ${suite.version})</span>`;
-bar.style.width = (100 * pass / (pass + fail)) + '%';
-bar.style.background = fail ? 'var(--bad)' : 'var(--ok)';
-src.textContent = `suite: ${suite.name} v${suite.version} \u00b7 parser interface: parse(uri) -> { ok, scheme, target, chainId, functionName, params, recipient, amount, errors, canonical }`;
-window.__conformance = { pass, fail, total: pass + fail, version: suite.version };
+/** Serialise a parsed URI back to a canonical EIP-681 string. */
+function format(v) {
+  if (!v || !v.target) throw new Error('format() needs a parsed value with a target');
+  let s = SCHEME + ':' + v.target;
+  if (v.chainId !== null && v.chainId !== undefined) s += '@' + v.chainId;
+  if (v.functionName) s += '/' + v.functionName;
+  // Params are stored lower-cased for lookup, but EIP-681 spells some of them with
+  // interior capitals. Canonical output must use the spec spelling or it is not canonical.
+  const CANON_NAME = { address: 'address', uint256: 'uint256', value: 'value',
+                       gas: 'gas', gasprice: 'gasPrice', gaslimit: 'gasLimit' };
+  const keys = Object.keys(v.params || {});
+  if (keys.length) {
+    // deterministic ordering: address, uint256, value, then the rest sorted
+    const order = ['address', 'uint256', 'value'];
+    keys.sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    s += '?' + keys.map(k => `${CANON_NAME[k] || k}=${encodeURIComponent(v.params[k])}`).join('&');
+  }
+  return s;
+}
+
+/** Convenience: build an ERC-20 transfer request. */
+function erc20Transfer({ chainId, token, to, amount }) {
+  const errors = [];
+  if (!/^0x[0-9a-fA-F]{40}$/.test(token || '')) errors.push(err('token', `token is not an address: ${token}`));
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to || '')) errors.push(err('to', `recipient is not an address: ${to}`));
+  let amt = amount;
+  if (typeof amt === 'bigint') amt = amt.toString();
+  if (typeof amt === 'number') amt = String(amt);
+  if (!amt || !parseAmount(String(amt)).ok) errors.push(err('amount', `amount is not a valid base-unit integer: ${amount}`));
+  if (errors.length) return { ok: false, errors, uri: null };
+  return {
+    ok: true, errors: [],
+    uri: format({ scheme: SCHEME, target: token, chainId, functionName: ERC20_TRANSFER, params: { address: to, uint256: String(amt) } }),
+  };
+}
+
+/** Convenience: build a native-currency transfer request. */
+function nativeTransfer({ chainId, to, wei }) {
+  const errors = [];
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to || '')) errors.push(err('to', `recipient is not an address: ${to}`));
+  let amt = typeof wei === 'bigint' ? wei.toString() : String(wei ?? '');
+  if (!amt || !parseAmount(amt).ok) errors.push(err('wei', `amount is not a valid wei integer: ${wei}`));
+  if (errors.length) return { ok: false, errors, uri: null };
+  return {
+    ok: true, errors: [],
+    uri: format({ scheme: SCHEME, target: to, chainId, functionName: null, params: { value: amt } }),
+  };
+}
+{ parse, format, parseAmount, keccak256, toChecksumAddress, isChecksumAddress, erc20Transfer, nativeTransfer, SCHEME, ERC20_TRANSFER };
+
+// ===== end inlined parser =====
+
+const SUITE = {"$schema":"https://json-schema.org/draft/2020-12/schema","suite":"eip681-conformance","version":"1.0.0","spec":"https://eips.ethereum.org/EIPS/eip-681","description":"Language-agnostic EIP-681 conformance vectors. Expectations are authored from the EIP-681 specification text and from defects observed in real parsers; they are NOT generated from any single implementation's output. A conforming parser must reproduce `expect` for every case. Fields under `expect.fields` are checked only when ok is true.","fields_checked":{"ok":"boolean — no errors present (warnings may exist)","error_codes":"array of strings — each MUST appear in the parser's error list when ok=false","warning_codes":"array of strings — each MUST appear in the warning list","fields":"semantic values that must match when ok=true: chainId (integer|null), amount (decimal string|null), recipient (lowercase hex or null), target (lowercase hex or null), isTokenTransfer (boolean)"},"notes":["C-* = address handling. S-* = structural. A-* = amount. T-* = token transfer. X-* = cross-cutting hazards."],"vectors":[{"id":"S-01","why":"Baseline: the minimal well-formed native transfer.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":true,"fields":{"chainId":1,"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359","amount":null,"isTokenTransfer":false}}},{"id":"S-02","why":"No scheme separator before the address: not a URI with a scheme at all.","input":"0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359","expect":{"ok":false,"error_codes":["no-scheme"]}},{"id":"S-03","why":"EIP-681 fixes the scheme as 'ethereum'. A different one names a different payment system.","input":"bitcoin:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359","expect":{"ok":false,"error_codes":["bad-scheme"]}},{"id":"S-04","why":"Empty string is not a URI.","input":"","expect":{"ok":false,"error_codes":["empty"]}},{"id":"S-05","why":"Scheme present but no target address.","input":"ethereum:","expect":{"ok":false,"error_codes":["no-target"]}},{"id":"S-06","why":"Scheme comparison is case-insensitive per RFC 3986; 'Ethereum:' names the same scheme.","input":"Ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":true,"fields":{"chainId":1}}},{"id":"S-07","why":"The 'pay-' prefix is deprecated but must still parse; ignoring it would make the parser reject a legal URI.","input":"ethereum:pay-0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":true,"fields":{"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"}},"warning_codes":["pay-prefix"]},{"id":"S-08","why":"Uppercase hex in the target body with no mixed case is not a checksum claim.","input":"ethereum:0xFB6916095CA1DF60BB79CE92CE3EA74C37C5D359@1","expect":{"ok":true,"fields":{"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"}}},{"id":"C-01","why":"A 20-byte address is exactly 40 hex digits. This is the accepted baseline for every length case below.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":true,"fields":{"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"}}},{"id":"C-02","why":"39 digits = 19.5 bytes. Not an address.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d35@1","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"C-03","why":"REAL DEFECT CLASS: grammars written as a minimum (parse_min(40)) inherit no ceiling, so 41 digits reach the checksum step. Observed upstream: an over-length native recipient was returned as a valid ERC-55 address instead of rejected.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590@1","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"C-04","why":"42 digits — the single sample most length bugs are tested against; a 41..64 sweep catches what a lone 42 does not.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d35900@1","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"C-05","why":"48 digits — a common truncation/padding boundary in fixed-width encoders.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359000000000@1","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"C-06","why":"64 digits — exactly 32 bytes, so it fits a bytes32 slot and can survive a naive hex-to-bytes conversion.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359000000000000000000000000@1","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"C-07","why":"Mixed case IS an EIP-55 checksum claim. This is canonical vector #2 written with WRONG casing so the claim fails; accepting it means paying an address the string does not describe.","input":"ethereum:0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":false,"error_codes":["bad-checksum"]}},{"id":"C-08","why":"Canonical EIP-55 vector #2, correct casing. Must be accepted.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1","expect":{"ok":true,"fields":{"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"}}},{"id":"C-09","why":"Canonical EIP-55 vector #1.","input":"ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed@1","expect":{"ok":true,"fields":{"target":"0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"}}},{"id":"C-10","why":"Canonical EIP-55 vector #3.","input":"ethereum:0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB@1","expect":{"ok":true,"fields":{"target":"0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb"}}},{"id":"C-11","why":"All-lowercase makes no checksum claim and must not be rejected — a parser that demands mixed case breaks most real QRs.","input":"ethereum:0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359@1","expect":{"ok":true,"fields":{"target":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"}}},{"id":"C-12","why":"The zero address is syntactically valid and unrecoverable. Emitting it is always a bug; refusing is safer than warning.","input":"ethereum:0x0000000000000000000000000000000000000000@1","expect":{"ok":false,"error_codes":["zero-address"]}},{"id":"A-01","why":"EIP-681 spec example: scientific notation with a decimal mantissa, exact value required.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=2.014e18","expect":{"ok":true,"fields":{"amount":"2014000000000000000"}}},{"id":"A-02","why":"Plain decimal integer.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=1000000000000000000","expect":{"ok":true,"fields":{"amount":"1000000000000000000"}}},{"id":"A-03","why":"Base units are indivisible, so a fractional amount cannot be expressed. Silently truncating would pay a different number than written.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=1.5","expect":{"ok":false,"error_codes":["amount-fractional"]}},{"id":"A-04","why":"Negative amounts are meaningless in this scheme.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=-1","expect":{"ok":false,"error_codes":["amount-invalid"]}},{"id":"A-05","why":"uint256 maximum must survive without precision loss — the classic JSON float hazard.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=115792089237316195423570985008687907853269984665640564039457584007913129639935","expect":{"ok":true,"fields":{"amount":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}}},{"id":"A-06","why":"A bare exponent with no mantissa is not a number.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=e18","expect":{"ok":false,"error_codes":["amount-invalid"]}},{"id":"A-07","why":"Empty value parameter.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?value=","expect":{"ok":false,"error_codes":["amount-empty"]}},{"id":"A-08","why":"EIP-155 chain ids start at 1. '@0' names a network that does not exist, so the destination is undefined.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@0","expect":{"ok":false,"error_codes":["chain-id-zero"]}},{"id":"A-09","why":"Chain id is present but empty.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@","expect":{"ok":false,"error_codes":["empty-chain-id"]}},{"id":"A-10","why":"A chain id beyond Number.MAX_SAFE_INTEGER cannot be represented exactly; accepting it risks silently changing the network.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@99999999999999999999999","expect":{"ok":false,"error_codes":["chain-id-overflow"]}},{"id":"A-11","why":"Missing chain id is legal per the grammar but hazardous: the same contract address exists on many chains. Must parse, and must be flagged.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359?value=1","expect":{"ok":true,"fields":{"chainId":null,"amount":"1"}},"warning_codes":["no-chain-id"]},{"id":"A-12","why":"Hex chain id is a common extension and must be read as a number, not a string.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@0x89","expect":{"ok":true,"fields":{"chainId":137}}},{"id":"T-01","why":"Canonical ERC-20 transfer. Target is the TOKEN CONTRACT; `address` is the human recipient.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000","expect":{"ok":true,"fields":{"isTokenTransfer":true,"target":"0xdac17f958d2ee523a2206206994597c13d831ec7","recipient":"0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359","amount":"1000","chainId":1}}},{"id":"T-02","why":"HIGH-SEVERITY HAZARD: omitting uint256 is grammar-valid, but some parsers read it as a fixed zero transfer and others as an open-ended amount the user authorises. Must parse and must be flagged.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359","expect":{"ok":true,"fields":{"isTokenTransfer":true,"amount":null},"warning_codes":["token-no-amount"]}},{"id":"T-03","why":"No recipient means the tokens have no destination that a wallet can show the user.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?uint256=1000","expect":{"ok":false,"error_codes":["token-no-recipient"]}},{"id":"T-04","why":"REAL DEFECT CLASS: a deposit QR that puts the ERC-20 CONTRACT in `address` makes any parser read the contract as the payee. A parser must not conflate target with recipient.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xdAC17F958D2ee523a2206206994597C13D831ec7&uint256=1000","expect":{"ok":true,"fields":{"target":"0xdac17f958d2ee523a2206206994597c13d831ec7","recipient":"0xdac17f958d2ee523a2206206994597c13d831ec7"}},"note":"Legal but semantically identical target and recipient: the caller must be able to SEE that they are equal and decide. A parser that hides `target` makes this indistinguishable from T-01."},{"id":"T-05","why":"`value` alongside `uint256` is ambiguous: to one parser the number is token base units, to another it is native currency. Two fields, one transfer, one of them silently ignored.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000&value=1","expect":{"ok":false,"error_codes":["token-value-ambiguous"],"fields":{"amount":null}},"note":"`amount` MUST be null here. When ok=false the ambiguous figure must not be exposed, or a caller testing `amount !== null` pays a silently chosen number."},{"id":"T-06","why":"uint256 is only defined by EIP-681 inside /transfer. At the top level of a native request, and inside any other function, its meaning depends on an ABI the URI does not carry — so it must not be silently accepted as an amount.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1?uint256=1000","expect":{"ok":false,"error_codes":["uint256-without-transfer"]}},{"id":"T-07","why":"An over-length address in `address=` (the recipient slot) is as dangerous as one in the target: 41 hex digits.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590&uint256=1000","expect":{"ok":false,"error_codes":["bad-recipient"]}},{"id":"T-08","why":"An over-length TOKEN CONTRACT address is the third call site of the same length check and the one most test suites omit.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec70@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000","expect":{"ok":false,"error_codes":["bad-address"]}},{"id":"T-09","why":"Recipient is the zero address — tokens are burned.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0x0000000000000000000000000000000000000000&uint256=1000","expect":{"ok":false,"error_codes":["recipient-zero"]}},{"id":"T-10","why":"A token transfer of exactly zero is legal but almost always a mistake; flag, do not reject.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=0","expect":{"ok":true,"fields":{"amount":"0"},"warning_codes":["token-amount-zero"]}},{"id":"T-11","why":"A mixed-case recipient with a failing checksum claim. Warning rather than error is the defensible choice here (the field is a parameter, not the target), but it must not pass silently.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/transfer?address=0xFB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000","expect":{"ok":true,"warning_codes":["recipient-bad-checksum"]}},{"id":"X-01","why":"CROSS-CUTTING: the same address on two chains is two different accounts. A URI without a chain id that is fed to a wallet defaulting to the wrong network pays the wrong place.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000","expect":{"ok":true,"fields":{"chainId":null,"isTokenTransfer":true},"warning_codes":["no-chain-id"]}},{"id":"X-02","why":"Query parameters are separated by '&'. A parser that splits on the first '?' only, or that fails to stop at a fragment, mis-reads the amount.","input":"ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000&gas=21000","expect":{"ok":true,"fields":{"amount":"1000","isTokenTransfer":true}}},{"id":"X-03","why":"Leading and trailing whitespace is common when a URI is extracted from a QR or a line of text; trimming is safe and must not change semantics.","input":"  ethereum:0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359@1  ","expect":{"ok":true,"fields":{"chainId":1}}},{"id":"X-04","why":"An APPROVAL is not a payment. EIP-681 defines uint256 only for /transfer, so inside /approve the number depends on an ABI the URI does not carry: refusing it is the safe behaviour. What must NOT happen is an approval being reported as a transfer.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/approve?spender=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1000","expect":{"ok":false,"error_codes":["uint256-without-transfer"]}},{"id":"X-06","why":"The same approval-shaped URI WITHOUT uint256 must still parse, and must report isTokenTransfer=false. If every function collapsed to isTokenTransfer=true, an unlimited token approval would be shown to the user as an ordinary payment.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7@1/approve?spender=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359","expect":{"ok":true,"fields":{"isTokenTransfer":false,"amount":null}}},{"id":"X-05","why":"A 41-digit token address plus a 41-digit recipient: two independent length failures. Reporting only the first hides the second.","input":"ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec70@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d3590&uint256=1000","expect":{"ok":false,"error_codes":["bad-address","bad-recipient"]}}]};
+
+const codes = (list) => (list || []).map((e) => e.code);
+const low = (x) => (typeof x === 'string' ? x.toLowerCase() : x);
+
+function runOne(v) {
+  const problems = [];
+  let r;
+  try { r = parse(v.input); }
+  catch (e) { return { problems: ['threw: ' + e.message] }; }
+
+  if (r.ok !== v.expect.ok) {
+    const c = codes(r.errors).join(',') || 'none';
+    problems.push('ok: expected ' + v.expect.ok + ' got ' + r.ok + ' [errors: ' + c + ']');
+  }
+  const haveErrors = codes(r.errors);
+  for (const c of v.expect.error_codes || []) {
+    if (!haveErrors.includes(c)) problems.push('missing error code "' + c + '" (have: ' + (haveErrors.join(',') || 'none') + ')');
+  }
+  const haveWarnings = codes(r.warnings);
+  for (const c of v.expect.warning_codes || []) {
+    if (!haveWarnings.includes(c)) problems.push('missing warning code "' + c + '" (have: ' + (haveWarnings.join(',') || 'none') + ')');
+  }
+  if (v.expect.ok && v.expect.fields) {
+    const f = v.expect.fields;
+    if ('chainId' in f && r.chainId !== f.chainId) problems.push('chainId: expected ' + f.chainId + ' got ' + r.chainId);
+    if ('amount' in f) {
+      const got = r.amount === null || r.amount === undefined ? null : r.amount.toString();
+      if (got !== f.amount) problems.push('amount: expected ' + f.amount + ' got ' + got);
+    }
+    if ('recipient' in f && low(r.recipient) !== f.recipient) problems.push('recipient: expected ' + f.recipient + ' got ' + low(r.recipient));
+    if ('target' in f && low(r.target) !== f.target) problems.push('target: expected ' + f.target + ' got ' + low(r.target));
+    if ('isTokenTransfer' in f && r.isTokenTransfer !== f.isTokenTransfer) problems.push('isTokenTransfer: expected ' + f.isTokenTransfer + ' got ' + r.isTokenTransfer);
+  }
+  if (!v.expect.ok && v.expect.fields && 'amount' in v.expect.fields) {
+    const got = r.amount === null || r.amount === undefined ? null : r.amount.toString();
+    if (got !== v.expect.fields.amount) problems.push('amount on a FAILED parse: expected ' + v.expect.fields.amount + ' got ' + got);
+  }
+  return { problems };
+}
+
+let pass = 0;
+const tbody = document.getElementById('rows');
+for (const v of SUITE.vectors) {
+  const { problems } = runOne(v);
+  const good = problems.length === 0;
+  if (good) pass++;
+  const tr = document.createElement('tr');
+  if (!good) tr.className = 'bad';
+  tr.innerHTML =
+    '<td>' + v.id + '</td>' +
+    '<td class="' + (good ? 'pass' : 'fail') + '">' + (good ? 'pass' : 'FAIL') + '</td>' +
+    '<td><code>' + v.input.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]) + '</code></td>' +
+    '<td>' + (good ? '<span class="pill">ok</span>' : problems.join('<br>')) + '</td>';
+  tbody.appendChild(tr);
+}
+
+const total = SUITE.vectors.length;
+document.getElementById('summary').textContent = pass + ' / ' + total;
+document.getElementById('summary').className = 'big ' + (pass === total ? 'pass' : 'fail');
+document.getElementById('sub').textContent = pass === total
+  ? 'all vectors satisfied — parser and spec-derived expectations agree'
+  : (total - pass) + ' mismatch(es) — the parser disagrees with the hand-authored expectation';
+
+// ---- interactive box ----
+function show() {
+  const raw = document.getElementById('in').value;
+  const out = document.getElementById('out');
+  try {
+    const r = parse(raw);
+    const e = codes(r.errors), w = codes(r.warnings);
+    out.textContent = JSON.stringify({
+      ok: r.ok,
+      errors: e.length ? e : undefined,
+      warnings: w.length ? w : undefined,
+      chainId: r.chainId,
+      target: r.target,
+      recipient: r.recipient,
+      amount: r.amount === null || r.amount === undefined ? null : r.amount.toString(),
+      isTokenTransfer: r.isTokenTransfer
+    }, null, 2);
+  } catch (err) {
+    out.textContent = 'threw: ' + err.message;
+  }
+}
+document.getElementById('go').addEventListener('click', show);
+document.getElementById('in').addEventListener('input', show);
+show();
 </script>
 </body>
 </html>

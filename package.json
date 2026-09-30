@@ -17,13 +17,14 @@
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
     "conformance": "node conformance/run.mjs && node conformance/vectors.run.mjs",
-    "test:all": "node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs",
+    "test:all": "node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs && node tools/build_conformance_page.mjs && node tools/verify_conformance_page.mjs",
     "lint:rust": "node tools/check_unrecognised.mjs tools/fixtures",
     "selfcheck": "node tools/check_unrecognised.mjs tools/fixtures",
     "test:adversarial": "node adversarial.mjs",
     "conformance:vectors": "node conformance/vectors.run.mjs",
     "conformance:generated": "node conformance/gen_vectors.mjs",
-    "conformance:gen": "node conformance/gen_vectors.mjs"
+    "conformance:gen": "node conformance/gen_vectors.mjs",
+    "conformance:page": "node tools/build_conformance_page.mjs && node tools/verify_conformance_page.mjs"
   },
   "files": [
     "LICENSE",

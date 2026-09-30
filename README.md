@@ -56,6 +56,25 @@ That second failure text is the important one: it reproduces, in JavaScript, the
 defect class found in `zcash/librustzcash` `components/eip681`, where an over-length
 address falls through to the checksum step instead of being refused for its length.
 
+## Run the corpus in your browser
+
+**https://469536968-svg.github.io/eip681-kit/conformance.html**
+
+A single self-contained HTML file (`conformance.html`) with the parser and all 49 vectors
+inlined — no network, no build step, nothing to clone. It prints `49 / 49`, lists every
+vector with its verdict, and includes a box that parses any URI you paste.
+
+The page is *generated*, not hand-written:
+
+```
+npm run conformance:page     # build the page, then verify it by executing it
+```
+
+The verifier extracts the page's real inline module script and runs it against a minimal
+DOM stub, then asserts the page set its own summary to `49 / 49` and rendered 49 rows with
+0 failures. "The page should work in a browser" is a claim; running the page's code and
+reading the result is evidence.
+
 ## Portable conformance corpus (language-agnostic)
 
 `conformance/vectors.json` — **49 hand-authored EIP-681 vectors**, written from the
