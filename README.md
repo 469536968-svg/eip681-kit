@@ -91,6 +91,42 @@ npm run conformance        # runs both suites
 npm run conformance:gen    # regenerate the TSV/NDJSON from vectors.json
 ```
 
+### Run the corpus against *your* parser
+
+The corpus is only worth anything if it can be pointed at an implementation that is not
+mine. `conformance/check.mjs` does that: write one small adapter and get a report naming
+exactly which vectors disagree.
+
+```
+node conformance/check.mjs conformance/adapters/kit.mjs     # this repo's parser: 49/49
+node conformance/check.mjs path/to/your-adapter.mjs
+```
+
+An adapter is a default export mapping your parser's output onto a normalized shape:
+
+```js
+export default function adapt(uri) {
+  const r = myParser(uri);
+  return {
+    ok: r.ok, errors: r.errors, warnings: r.warnings,
+    chainId: r.chainId, target: r.token, recipient: r.to,
+    amount: r.amount?.toString() ?? null,   // exact base units, never a float
+    isTokenTransfer: r.kind === 'transfer',
+  };
+}
+```
+
+`conformance/adapters/kit.mjs` is the worked example. `conformance/adapters/naive.mjs`
+is a **deliberately non-conforming** parser kept as the negative control — it exists to
+prove the harness can fail:
+
+| adapter | result |
+|---|---|
+| `adapters/kit.mjs` (reference parser) | **49/49**, exit 0 |
+| `adapters/naive.mjs` (min-length addresses, `Number()` amounts, contract-as-recipient, approvals counted as transfers) | **5/49**, exit 1, 44 mismatches named |
+
+If the naive adapter ever passes, the harness is broken, not the parser.
+
 ### The bug classes the corpus is designed to catch
 
 | Cases | Class |

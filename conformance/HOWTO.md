@@ -38,3 +38,26 @@ For each case:
 
 Fail the build if any case mismatches. The corpus is small enough to run in
 milliseconds and specific enough that a regression names itself.
+
+
+## Running against your own parser
+
+```
+node conformance/check.mjs <your-adapter.mjs>
+```
+
+Adapter contract: default-export `adapt(uri)` returning
+`{ ok, errors, warnings, chainId, target, recipient, amount, isTokenTransfer }`.
+`amount` must be an exact base-unit integer (string or BigInt) — a JS number loses
+precision above 2^53 and uint256 does not fit. The harness enforces five rules:
+
+1. `ok` matches the vector's expectation exactly.
+2. On failure, every expected error code is present.
+3. Every expected warning code is present.
+4. On success, each expected field matches (`amount` compared as a decimal string).
+5. **On failure, no amount may be exposed.** A caller testing `amount !== null` rather
+   than `ok` must not be able to pay a silently chosen number (vector `T-05`).
+
+Two adapters ship as controls: `adapters/kit.mjs` (49/49, exit 0) and `adapters/naive.mjs`
+(a deliberately non-conforming parser: 5/49, exit 1). The second one is the proof that a
+failing report is reachable.
