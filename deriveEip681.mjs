@@ -25,12 +25,12 @@
 
 import { erc20Transfer, nativeTransfer, SCHEME, isChecksumAddress } from './eip681.mjs';
 
-const isHexAddress = (s) =>
+export const isHexAddress = (s) =>
   typeof s === 'string' && /^0x[0-9a-fA-F]{40}$/.test(s);
 
 // Same rule parse() uses: all-lower/all-upper are treated as "no claim"; mixed
 // case is a claim that must verify. Refuse (return false) on a failed claim.
-const isUsableAddress = (s) => isHexAddress(s) && isChecksumAddress(s);
+export const isUsableAddress = (s) => isHexAddress(s) && isChecksumAddress(s);
 
 export const toBaseUnits = (amount, decimals) => {
   // amount: string|number of whole tokens (e.g. "1.5"), decimals: token decimals.
