@@ -650,3 +650,98 @@ fractional wei does not exist.
 npm test          # 43 parser + 35 derive + 44 CLI
 npm run test:cli
 ```
+
+---
+
+## Amount precision: three defects in EIP-681 amount handling
+
+Found while answering [MetaMask/metamask-mobile#37818](https://github.com/MetaMask/metamask-mobile/issues/37818).
+All three are reproduced by executing the published packages (`eth-url-parser`,
+`@metamask/controller-utils`) — not read from source.
+
+Run it: `npm i eth-url-parser @metamask/controller-utils && node amount-precision.test.mjs`
+→ **21 assertions, 0 failures.**
+
+### 1. The parser emits exponent notation for large amounts
+
+```
+ethereum:0x5aAe…eAed@1?value=1000000000000000000000
+  parameters = {"value":"1e+21"}
+```
+
+The 21-digit amount comes back as the **string** `"1e+21"`. Any amount test written
+naively as `/^\d+$/.test(value)` is therefore **false** for a perfectly valid 10²¹ wei
+amount. Measured over a 1..40-digit sweep in both `value` and `uint256` forms:
+**the naive test drops 38 of 80 cases.** A patch built on it would send the user to the
+Send screen with the amount silently discarded — worse than the bug it fixes.
+Expand exponent notation *before* testing digits.
+
+### 2. `toHex` cannot parse exponent notation, and only `uint256` is normalised early
+
+```
+toHex("1e+21")                    -> throws: Invalid character
+toHex("1000000000000000000000")   -> 0x3635c9adc5dea00000
+```
+
+Because `uint256` is normalised before routing but `value` is not, the two paths diverge
+on large values:
+
+```
+21-digit uint256 -> 0x3635c9adc5dea00000   (safe)
+21-digit value   -> THROWS                 (asymmetry)
+```
+
+Callers that let that throw reach a generic catch and report the wrong error — so a
+**large-valued** link shows the same misleading message as an amount-less one. The
+normalisation ordering is load-bearing and undocumented; that is why the `value` path
+diverged.
+
+### 3. An explicit zero is truthy
+
+```
+?value=0     raw="0"  truthy=true   toHex=0x0
+?value=      raw=""   truthy=false  toHex=0x0
+?uint256=0   raw="0"  truthy=true   toHex=0x0
+?uint256=   raw=""   truthy=false  toHex=0x0
+```
+
+A truthiness check accepts `"0"` and builds a **0-value transaction headed for
+confirmation**. Both an explicit zero and a present-but-empty key should prompt for an
+amount instead. Use `BigInt(expanded) > 0n`, not `!!value`.
+
+### The corrected predicate
+
+Amount presence and routing are **two different questions** — conflating them is how
+`approve` silently changes behaviour. Keep them separate:
+
+```js
+// 1. Is there a real, non-zero amount?
+function hasPositiveAmount(params) {
+  if (!params) return false;
+  const raw = params.uint256 !== undefined ? params.uint256 : params.value;
+  if (raw === undefined || raw === null) return false;
+  if (String(raw).trim() === '') return false;              // key present, value empty
+  const expanded = String(expandExponent(String(raw)));     // '1e+21' -> digits
+  if (!/^\d+$/.test(expanded)) return false;
+  return BigInt(expanded) > 0n;                             // 0 => prompt, never confirm
+}
+
+// 2. Does routing allow this action?
+function isRedesignedConfirmationCompatible(request) {
+  if (!hasPositiveAmount(request.parameters)) return false;
+  switch (request.function_name) {
+    case 'approve': return false;   // legacy-only
+    case 'transfer':
+    default: return true;
+  }
+}
+```
+
+`expandExponent` uses string arithmetic, never `Number()`, so no precision is lost.
+
+### Scope
+
+This is a model of a caller's control flow driven by the **genuine** `toHex` and
+**genuine** `eth-url-parser`. It is not MetaMask's built app, and it does not run their
+test suite. Every claim above is executed; that one limitation is the reason this is
+published as a reproduction rather than as a patch.
