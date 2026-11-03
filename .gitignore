@@ -7,3 +7,7 @@ ship*.bat
 commitmsg.txt
 out.txt
 RECOVER_AND_SCAN.sh
+_npm.json
+_r.json
+pg.json
+repocreate.json
