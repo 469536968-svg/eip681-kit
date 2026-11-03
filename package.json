@@ -31,7 +31,8 @@
     "conformance:check": "node conformance/check.mjs conformance/adapters/kit.mjs",
     "conformance:check:naive": "node conformance/check.mjs conformance/adapters/naive.mjs",
     "build:types": "node tools/build_types.mjs",
-    "test:types": "node types.test.mjs"
+    "test:types": "node types.test.mjs",
+    "test:dist": "node tools/dist_check.mjs"
   },
   "files": [
     "LICENSE",
