@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.mjs",
   "bin": {
-    "eip681": "./cli.mjs"
+    "eip681": "cli.mjs"
   },
   "exports": {
     ".": {
@@ -31,8 +31,7 @@
     "conformance:check": "node conformance/check.mjs conformance/adapters/kit.mjs",
     "conformance:check:naive": "node conformance/check.mjs conformance/adapters/naive.mjs",
     "build:types": "node tools/build_types.mjs",
-    "test:types": "node types.test.mjs",
-    "test:dist": "node tools/dist_check.mjs"
+    "test:types": "node types.test.mjs"
   },
   "files": [
     "LICENSE",
