@@ -297,7 +297,14 @@ export function parse(uri) {
     } else {
       out.recipient = to;
       if (!isChecksumAddress(to)) {
-        warnings.push(warn('recipient-bad-checksum', `recipient has an invalid EIP-55 checksum: ${to}`));
+        // isChecksumAddress() is TRUE for all-lower and all-upper: those carry no
+        // case information, so they cannot be wrong (README:
+        // all-lowercase-is-not-a-checksum-claim). Reaching this branch therefore
+        // means the payee is MIXED CASE and its EIP-55 claim FAILED -- the address
+        // is probably corrupted. The target is refused for exactly this reason, and
+        // the recipient is where the money actually lands, so it must not be held to
+        // a weaker standard than the token contract.
+        errors.push(err('recipient-bad-checksum', `recipient has mixed case that FAILS its EIP-55 checksum: ${to}`));
       }
       if (to.toLowerCase() === ZERO_ADDRESS) {
         errors.push(err('recipient-zero', 'recipient is the zero address; funds sent to it are unrecoverable'));
@@ -351,6 +358,15 @@ export function parse(uri) {
 
   // unknown params left in place; they are legal extensions per the spec
   out.ok = errors.length === 0;
+
+  // INVARIANT (documented in index.d.ts for `amount`): a parse reporting
+  // ok === false must never carry a field a caller could mistake for a
+  // decision. Enforced once, here at the exit -- otherwise every error path
+  // has to remember it separately, and a consumer reading `amount !== null`
+  // instead of `ok` takes a number out of a parse this module rejected.
+  if (!out.ok) {
+    out.amount = null;
+  }
   try { out.canonical = out.ok ? format(out) : null; } catch { out.canonical = null; }
   return out;
 }
