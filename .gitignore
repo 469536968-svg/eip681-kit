@@ -1,3 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+# scratch: local scratch scripts and command output must never ship
+_*.py
+ship*.bat
+commitmsg.txt
+out.txt
+RECOVER_AND_SCAN.sh
