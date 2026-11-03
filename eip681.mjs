@@ -380,7 +380,8 @@ export function format(v) {
 }
 
 /** Convenience: build an ERC-20 transfer request. */
-export function erc20Transfer({ chainId, token, to, amount }) {
+export function erc20Transfer(cfg) {
+  const { chainId, token, to, amount } = cfg == null || typeof cfg !== 'object' ? {} : cfg;
   const errors = [];
   if (!/^0x[0-9a-fA-F]{40}$/.test(token || '')) errors.push(err('token', `token is not an address: ${token}`));
   if (!/^0x[0-9a-fA-F]{40}$/.test(to || '')) errors.push(err('to', `recipient is not an address: ${to}`));
@@ -396,7 +397,12 @@ export function erc20Transfer({ chainId, token, to, amount }) {
 }
 
 /** Convenience: build a native-currency transfer request. */
-export function nativeTransfer({ chainId, to, wei }) {
+export function nativeTransfer(cfg) {
+  // Defensive: destructuring the parameter directly threw on null/undefined,
+  // which broke the kit's own contract (every other failure returns
+  // { ok:false, errors:[...] }). A consumer passing an uninitialised config
+  // crashed their app instead of getting a diagnosable rejection.
+  const { chainId, to, wei } = cfg == null || typeof cfg !== 'object' ? {} : cfg;
   const errors = [];
   if (!/^0x[0-9a-fA-F]{40}$/.test(to || '')) errors.push(err('to', `recipient is not an address: ${to}`));
   let amt = typeof wei === 'bigint' ? wei.toString() : String(wei ?? '');

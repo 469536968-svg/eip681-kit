@@ -1,0 +1,21 @@
+1) quantum measurement
+  PASS  quantum at 1 MiB equals half a 0.1 MiB step
+  PASS  quantum is strictly smaller than a full last-digit step
+  PASS  quantum at 0 is ~52 bytes for a 1-decimal KiB formatter
+2) the defective formatter falsifies the property
+  PASS  collisions > 0
+  PASS  collision rate is high (>50%)
+        measured: 2412/3456 = 69.8% ambiguous
+3) negative control: the property is not vacuous
+  PASS  a formatter with a sub-KiB branch still collides above a KiB
+4) sizePairText satisfies the property where the formatter cannot
+  PASS  pair-aware formatter never collides
+5) the reported real-world case reproduces
+  PASS  both sides really do render identically through the defective formatter
+  PASS  and the comparison still says "more than is free"
+  PASS  pair-aware rendering distinguishes them
+        old message: 500.0 GiB free ... about 500.0 GiB more -- more than is free
+        new message: 512000.0 MiB free ... about 512001.0 MiB more -- more than is free
+
+ALL CHECKS PASSED
+defective formatter: 2412/3456 pairs indistinguishable (69.8%)
