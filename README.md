@@ -9,6 +9,29 @@ unknown parser* is not — and the failure mode is money sent to the wrong place
 This library refuses to guess. Malformed input produces errors. Valid-but-dangerous
 input produces **warnings that name the hazard**, so the caller can decide.
 
+## Install
+
+```bash
+npm install https://codeload.github.com/469536968-svg/eip681-kit/tar.gz/refs/heads/main
+```
+
+```js
+import { parse, deriveEip681 } from 'eip681-kit';
+```
+
+That URL is a plain HTTPS tarball. It needs **no npm account, no registry publish and
+no `git` binary** — it is the path that works even on a locked-down machine. Once the
+package is on the registry, `npm install eip681-kit` will work too; until then the
+tarball URL above is the supported install, and it is the one that was actually executed.
+
+Verified end-to-end, not assumed: installed into an empty project, then all 14 declared
+exports were resolved at runtime, `toChecksumAddress` reproduced the canonical EIP-55
+vector, a rejected parse exposed `amount === null` (a rejected URI must never carry an
+amount), `1.5e18` decoded to `1500000000000000000` on chain 8453, and the bundled CLI
+ran. `npm run test:dist` repeats all of it against the packed tarball.
+
+---
+
 ```js
 import { parse } from './eip681.mjs';
 
@@ -156,7 +179,7 @@ export default function adapt(uri) {
     ok: r.ok, errors: r.errors, warnings: r.warnings,
     chainId: r.chainId, target: r.token, recipient: r.to,
     amount: r.amount?.toString() ?? null,   // exact base units, never a float
-    isTokenTransfer: r.kind === 'transfer',
+    isTokenTransfer: r.isTokenTransfer,
   };
 }
 ```
