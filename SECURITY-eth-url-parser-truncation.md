@@ -76,6 +76,38 @@ library's intent is to stay permissive about *other* aspects, note that this one
 different in kind: a rejected URI costs the user nothing, whereas an accepted-and-
 truncated URI can direct funds to the wrong account.
 
+## Independent confirmation in a second library
+
+The same sweep was run against a second, unrelated published parser,
+`@rsksmart/rif-wallet-eip681@1.0.1`, through the exact same harness. It behaves the
+same way:
+
+```
+input length | eth-url-parser@1.0.4          | @rsksmart/rif-wallet-eip681@1.0.1
+          40 | full address preserved        | full address preserved
+       41-48 | truncated to 40 digits        | truncated to 40 digits
+       > 48 | truncated to 40 digits        | truncated to 40 digits
+```
+
+Neither library rejected any over-length input (0 rejections out of 9 lengths each).
+Both returned an address object whose address field was a strict 40-digit **prefix** of
+what the caller supplied.
+
+For `eth-url-parser` the truncation additionally corrupts the chain id, because the
+unconsumed digits remain in the string and are parsed as part of it. `rif-wallet` does
+not report a chain id at all in this input form, so that second symptom is specific to
+`eth-url-parser`; the truncation itself is not.
+
+**What this does and does not show.** It shows the truncation behavior is not an
+isolated quirk of one package: two independently maintained parsers produce the same
+wrong address. It does **not** establish a shared root cause — I read the source of
+`eth-url-parser` (line 4720, quoted above) but I did **not** audit the source of
+`rif-wallet`, so I make no claim about why it fails. An unanchored 40-quantifier is a
+plausible common idiom, and that is all I can honestly say it is: plausible.
+
+This section exists because the earlier version of this note named one library, which
+understated the measured problem. The measurement was rerun specifically to test whether
+the previous claim was too narrow; it was.
 ## Scope and honesty
 
 - Verified against the **published** package from the npm registry, not the git HEAD.
