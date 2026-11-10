@@ -173,6 +173,7 @@ export function parse(uri) {
   const out = {
     ok: false, scheme: null, target: null, chainId: null, functionName: null,
     params: {}, isTokenTransfer: false, recipient: null, amount: null,
+    rejected: null,
     errors, warnings, canonical: null,
   };
 
@@ -365,6 +366,27 @@ export function parse(uri) {
   // has to remember it separately, and a consumer reading `amount !== null`
   // instead of `ok` takes a number out of a parse this module rejected.
   if (!out.ok) {
+    // Keep the offending pieces for DIAGNOSIS only, under a name no consumer
+    // would act on, then strip every field that could be mistaken for a decision.
+    // Before this block only `amount` was cleared, so a caller doing
+    //   if (r.target) sendTo(r.target)
+    // could still send to an address this module had just rejected for a bad
+    // checksum — the exact footgun this library asks other implementations to fix.
+    out.rejected = {
+      target: out.target,
+      chainId: out.chainId,
+      functionName: out.functionName,
+      params: out.params,
+      recipient: out.recipient,
+      isTokenTransfer: out.isTokenTransfer,
+      amount: out.amount,
+    };
+    out.target = null;
+    out.chainId = null;
+    out.functionName = null;
+    out.params = {};
+    out.recipient = null;
+    out.isTokenTransfer = false;
     out.amount = null;
   }
   try { out.canonical = out.ok ? format(out) : null; } catch { out.canonical = null; }
