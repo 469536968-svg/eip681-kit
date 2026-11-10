@@ -1,6 +1,6 @@
 {
   "name": "eip681-kit",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Strict EIP-681 payment URI parser, validator, formatter and CLI. Zero dependencies.",
   "type": "module",
   "main": "index.mjs",
