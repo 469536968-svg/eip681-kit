@@ -18,6 +18,18 @@ export interface AmountParseResult {
 }
 
 export interface ParseResult {
+  /**
+   * On a REJECTED parse (`ok === false`) every decision-bearing field is
+   * nulled: target, chainId, functionName, params, recipient, isTokenTransfer
+   * and amount. The offending pieces are preserved for diagnostics only, under
+   * `rejected`, so a caller that mistakenly tests a field instead of `ok`
+   * cannot act on an address or amount this module refused to accept.
+   *
+   *   const r = parse(uri)
+   *   if (!r.ok) throw new Error(r.errors[0].code)  // never read r.target here
+   *   sendTo(r.target)                              // safe only past this point
+   */
+  rejected: ParseRejected | null
   /** True when there are no `errors`. `warnings` may still be present and do not
    *  affect `ok` — they mark inputs that are valid but unsafe to hand to a
    *  third-party parser. */
@@ -88,3 +100,13 @@ export function parse(uri: string): ParseResult;
 export function parseAmount(raw: string): AmountParseResult;
 export function toBaseUnits(value: string | number | bigint, decimals: number): bigint;
 export function toChecksumAddress(addr: string): string;
+
+export interface ParseRejected {
+  target: string | null
+  chainId: number | null
+  functionName: string | null
+  params: Record<string, string>
+  recipient: string | null
+  isTokenTransfer: boolean
+  amount: bigint | null
+}
