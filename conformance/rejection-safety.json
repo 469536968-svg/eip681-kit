@@ -1,0 +1,76 @@
+{
+  "name": "rejection-safety",
+  "invariant": "A parse that reports ok === false must not expose a field a consumer could mistake for a decision (target, recipient, functionName, params, amount, chainId, isTokenTransfer).",
+  "why": "Consumers commonly branch on a field (`if (r.target) sendTo(r.target)`) instead of the status flag. If a rejected parse still carries a target, the consumer acts on an address the parser itself refused to accept -- e.g. a bad EIP-55 checksum.",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "bad-eip55-checksum",
+      "uri": "ethereum:0xAbCdef0123456789abcdef0123456789ABCDEF01",
+      "mustReject": true,
+      "note": "Mixed case is a checksum claim. This one is wrong. The address must not survive rejection."
+    },
+    {
+      "id": "address-39-hex",
+      "uri": "ethereum:0x123456789012345678901234567890123456789",
+      "mustReject": true,
+      "note": "Short address. If params survive, a token transfer builds against a truncated address."
+    },
+    {
+      "id": "address-41-hex",
+      "uri": "ethereum:0x12345678901234567890123456789012345678901",
+      "mustReject": true,
+      "note": "Over-length address (the librustzcash #3061 class)."
+    },
+    {
+      "id": "non-hex-address",
+      "uri": "ethereum:0xZZZ456789012345678901234567890123456789",
+      "mustReject": true,
+      "note": "Not hex at all."
+    },
+    {
+      "id": "negative-amount",
+      "uri": "ethereum:0x1234567890123456789012345678901234567890?value=-5",
+      "mustReject": true,
+      "note": "Negative wei. Amount rejection must not leave the payee address usable."
+    },
+    {
+      "id": "token-transfer-both-amounts",
+      "uri": "ethereum:0x1234567890123456789012345678901234567890/transfer?address=0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed&uint256=1000&value=5",
+      "mustReject": true,
+      "note": "Ambiguous between native and token units. A parser that rejects it must not also hand out a chosen number."
+    },
+    {
+      "id": "uint256-outside-transfer",
+      "uri": "ethereum:0x1234567890123456789012345678901234567890?uint256=1000",
+      "mustReject": true,
+      "note": "uint256 is only meaningful inside /transfer."
+    },
+    {
+      "id": "empty-uri",
+      "uri": "",
+      "mustReject": true,
+      "note": "Baseline: nothing to leak."
+    },
+    {
+      "id": "wrong-scheme",
+      "uri": "http://example.com/pay",
+      "mustReject": true,
+      "note": "Not an EIP-681 URI."
+    }
+  ],
+  "controlCases": [
+    {
+      "id": "valid-native-transfer",
+      "uri": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed@1?value=1e18",
+      "mustReject": false,
+      "note": "A rejection-safety check must not be satisfiable by rejecting everything."
+    },
+    {
+      "id": "valid-erc20-transfer",
+      "uri": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed@1/transfer?address=0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359&uint256=1e3",
+      "mustReject": false,
+      "note": "Positive control for the token path."
+    }
+  ]
+}
