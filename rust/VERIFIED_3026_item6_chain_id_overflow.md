@@ -1,6 +1,10 @@
 # Issue #3026 item 6 — ERC-20 path silently discards an unrepresentable chain id
 
 Compiler-verified on a local clone of `zcash/librustzcash` `components/eip681`.
+
+> All line numbers in this document were measured against upstream
+> `main` blob `f3a80400` (29876 bytes), not inferred from a local clone.
+
 Source-verified at upstream `main` (`0495aa63f430813a36d2ea6dd4e81c29c00a8ffa`).
 
 Two trees were used, and they are **not** the same tree. Both are named below
@@ -14,7 +18,7 @@ because a claim is only worth the tree it was measured on.
 At upstream `main`, `Erc20Request` has **no cached `chain_id` field at all**:
 
 ```rust
-// upstream main, components/eip681/src/request.rs:378
+// upstream main, components/eip681/src/request.rs:378-389
 pub struct Erc20Request {
     /// Validated token contract
     token_contract_address: String,
@@ -33,17 +37,22 @@ Every other field is described as *Validated*. `chain_id` is absent, so the
 accessor has to re-derive it on each call and throws the error away:
 
 ```rust
-// upstream main, components/eip681/src/request.rs:506
+// upstream main, components/eip681/src/request.rs:506-509
 pub fn chain_id(&self) -> Option<u64> {
     let digits = self.inner.chain_id.as_ref()?;
     digits.as_u64().ok()          // ValidationError discarded
 }
 ```
 
+Note that the file contains **two** `chain_id` accessors — `NativeRequest` at
+`request.rs:299` and `Erc20Request` at `request.rs:506`. Only the second discards
+the error, and the two are 200 lines apart, which is why this is easy to miss
+when reading the file top-down.
+
 `NativeRequest` does the opposite — it validates once, at construction:
 
 ```rust
-// upstream main, components/eip681/src/request.rs:236
+// upstream main, components/eip681/src/request.rs:236-240
 chain_id: if let Some(chain_id_digits) = raw.chain_id.as_ref() {
     Some(chain_id_digits.as_u64().context(ChainIdInvalidSnafu)?)
 } else {
