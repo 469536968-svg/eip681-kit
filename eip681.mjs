@@ -20,6 +20,9 @@ const CHAIN_HEX_RE = /^0x[0-9a-fA-F]+$/;
 const FUNCTION_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const UINT_RE = /^[0-9]+(?:\.[0-9]+)?(?:e[0-9]+)?$/i;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const UINT256_MAX = (1n << 256n) - 1n;
+// 2^256-1 has 78 decimal digits; any mantissa scaled past this cannot fit.
+const UINT256_MAX_EXP = 78;
 
 function err(code, message) { return { code, message }; }
 function warn(code, message) { return { code, message }; }
@@ -36,12 +39,24 @@ export function parseAmount(raw) {
     return { ok: false, value: null, errors: [err('amount-empty', 'amount is empty')] };
   }
   const hex = /^0x[0-9a-fA-F]+$/.test(raw);
-  if (hex) return { ok: true, value: BigInt(raw), errors: [] };
+  if (hex) {
+    const v = BigInt(raw);
+    if (v > UINT256_MAX) {
+      return { ok: false, value: null, errors: [err('amount-overflow', `hex amount exceeds uint256: ${raw}`)] };
+    }
+    return { ok: true, value: v, errors: [] };
+  }
   if (!UINT_RE.test(raw)) {
     return { ok: false, value: null, errors: [err('amount-invalid', `amount is not a non-negative integer or scientific notation: ${raw}`)] };
   }
   const [mantissa, exp] = raw.toLowerCase().split('e');
   const e = exp === undefined ? 0 : Number(exp);
+  // Bound the exponent BEFORE building 10n ** e. Without this, "1e100000000"
+  // attempts a 100-million-digit BigInt: a denial of service in a parser that
+  // advertises itself as safe to run on untrusted input.
+  if (!Number.isFinite(e) || e > UINT256_MAX_EXP + 1) {
+    return { ok: false, value: null, errors: [err('amount-overflow', `exponent out of range for uint256: ${raw}`)] };
+  }
 
   // A mantissa may carry a decimal point ("2.014e18"), which appears verbatim in
   // the EIP-681 spec text. Let the fraction contribute digits and reduce the
@@ -66,6 +81,10 @@ export function parseAmount(raw) {
       return { ok: false, value: null, errors: [err('amount-fractional', `amount is not a whole number of base units: ${raw}`)] };
     }
     v /= d;
+  }
+  // AMOUNT_OVERFLOW_FINAL: uint256 ceiling, enforced on the computed value.
+  if (v > UINT256_MAX) {
+    return { ok: false, value: null, errors: [err('amount-overflow', `amount exceeds uint256: ${raw}`)] };
   }
   return { ok: true, value: v, errors };
 }
