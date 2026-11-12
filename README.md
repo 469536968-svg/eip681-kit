@@ -195,6 +195,42 @@ prove the harness can fail:
 
 If the naive adapter ever passes, the harness is broken, not the parser.
 
+### Proven on a parser I did not write
+
+Everything above could still be dismissed as a suite tuned to its own implementation.
+So the same harness was pointed at `eth-url-parser@1.0.4` — a bundled, published,
+third-party parser — by deriving from its shipped `dist/index.js` two modules that
+differ by **exactly one regex**. Nothing else changes, so the delta is attributable.
+
+```bash
+node conformance/build-subjects.cjs <path>/eth-url-parser/dist/index.js conformance/subjects
+node conformance/run-against-parser.cjs conformance/subjects/subject-unpatched.cjs
+node conformance/run-against-parser.cjs conformance/subjects/subject-patched.cjs
+```
+
+| metric | unpatched (npm 1.0.4) | patched |
+|---|---|---|
+| corpus agree | **29 / 49** | **35 / 49** |
+| accepted-invalid | **19** | **13** |
+| over-length addresses accepted (41..64) | **24 / 24** | **0 / 24** |
+| of those, silently truncated | **24** | **0** |
+| exit code | 1 | 1 |
+
+Both runs print their instrument controls before any score — a canonical valid URI must
+parse (smoke control) and a 40-digit address must round-trip byte-identical (negative
+control) — because a number produced by a broken harness is worse than no number.
+
+The 24/24 is the part that matters: surplus digits are not rejected and not ignored,
+they are **absorbed into `chain_id`**. A different account is returned than was signed,
+and the network id is invented. Exit is honestly **1 on both runs**: the fix narrows the
+gap, it does not close it, and this table must not be read as if it did.
+
+`conformance/SUBJECTS.md` records the full differential, the six cases that correctly
+flip, the 13 residuals listed rather than hidden, and the three broken instruments
+(fabricated exit code, silent escaping bug, absolute precondition) found by executing
+rather than reading. Generated subjects are gitignored — they are third-party code and
+regenerating them is deterministic.
+
 ### The bug classes the corpus is designed to catch
 
 | Cases | Class |
