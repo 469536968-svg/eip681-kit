@@ -9,6 +9,9 @@ unknown parser* is not — and the failure mode is money sent to the wrong place
 This library refuses to guess. Malformed input produces errors. Valid-but-dangerous
 input produces **warnings that name the hazard**, so the caller can decide.
 
+
+> **Installing without npm?** A verified, no-registry install path (pinned commit + byte-identical check) is documented in [CONSUMING.md](./CONSUMING.md).
+
 ## Install
 
 ```bash
