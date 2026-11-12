@@ -4,15 +4,15 @@ This file exists to correct a claim I carried in my own notes for three weeks:
 that eip681-kit was unusable until it was published to the npm registry.
 
 **It was usable the whole time.** No registry account, no publish token, and no
-tarball are needed to consume it, because npm and CDNs can both fetch straight
-from the GitHub repo. Everything below was executed, not inferred.
+tarball are needed to consume it, because CDNs can fetch straight from the GitHub
+repo. Everything below was executed, not inferred.
 
-## Verified install path: esm.sh / jsDelivr from a pinned commit
+## Verified install path: a pinned commit, fetched as files
 
 Pin a **commit sha**, not a branch and not the `v1` tag. Two measured reasons:
 
 - `cdn.jsdelivr.net/gh/<owner>/<repo>@v1/` returned **HTTP 404** for me even though
-  the `v1` tag exists in the repo (jsDelivr fetches tag snapshots on demand).
+  the `v1` tag exists in the repo (jsDelivr resolves tag snapshots on demand).
 - `@main` returned `HTTP 200` on some runs and timed out (`HTTP 0`) on others.
 
 A commit sha was served reliably. Measured on commit `7e4001e3`:
@@ -30,23 +30,18 @@ suite ran against, not a stale snapshot that only *looks* like the same release.
 
 ### What to do
 
-Copy the three modules, or load them directly:
-
-```js
-// Resolution of ./eip681.mjs and ./deriveEip681.mjs is relative, so a CDN URL that
-// rewrites bare specifiers is required. esm.sh does this; plain jsDelivr file URLs
-// do NOT and will fail on the relative imports unless you mirror all three files
-// into one directory yourself.
-import { parse, format } from 'https://esm.sh/gh/469536968-svg/eip681-kit@7e4001e3';
-```
-
-Or fetch the three files into a local directory and import `index.mjs` from disk —
-this is the path I measured end to end, and it needs no bundler and no install:
+Fetch the three files into one local directory and import `index.mjs` from disk.
+This is the path I measured end to end; it needs no bundler and no install:
 
 ```js
 // after placing index.mjs, eip681.mjs, deriveEip681.mjs in ./vendor/eip681-kit/
 import { parse } from './vendor/eip681-kit/index.mjs';
 ```
+
+The imports between those three files are **relative** (`./eip681.mjs`). That is why
+you must mirror all three into one directory, or use a CDN that rewrites specifiers —
+plain jsDelivr *file* URLs do not rewrite them, so importing a single file from a CDN
+will fail on the relative imports unless its siblings are resolvable at the same path.
 
 ## Assertions actually executed on the fetched copy
 
@@ -69,14 +64,14 @@ which is the exact bug this kit exists to catch. A pass-only suite proves nothin
 
 Two things surprised me and are worth stating so they do not surprise you:
 
-- The recipient is **`target`**, not `to` or `address`. I asserted on `to`
-  first and got a false failure. The parser was right; my assertion was wrong.
+- The recipient is **`target`**, not `to` or `address`. I asserted on `to` first and
+  got a false failure. The parser was right; my assertion was wrong.
 - `amount` is a **`BigInt`**, not a string or number:
   `2014000000000000000n` for `value=2.014e18`. So `JSON.stringify(result)` throws
   `TypeError: Do not know how to serialize a BigInt`. That is the caller's problem
-  to solve (a `replacer` of `(k, v) => typeof v === 'bigint' ? v.toString() : v`
-  is enough) — it is not a defect in the kit, and a `Number` there would silently
-  lose precision on 18-decimal amounts, which is worse.
+  to solve — a `replacer` of `(k, v) => typeof v === 'bigint' ? v.toString() : v`
+  is enough. It is not a defect: a `Number` there would silently lose precision on
+  18-decimal amounts, which is worse.
 
 Warnings arrive as structured objects, not strings:
 
@@ -85,12 +80,31 @@ Warnings arrive as structured objects, not strings:
   "message": "no chain id (@) present; the same address can exist on multiple chains, so a wallet may pick the wrong one" }
 ```
 
-## What I did NOT verify
+## Measured negative: `npm install github:<repo>` does not work here
 
-- `npm install github:469536968-svg/eip681-kit` — attempted, but `npm` was not on
-  `PATH` in the shell that ran the test, so this path is **unmeasured**. Do not
-  treat it as supported on my word; it probably works, and I will not claim it does.
-- The npm registry is **not** part of this path at all. Nothing here needed it.
+I previously listed this as "unmeasured". It is now measured, and it fails:
+
+```
+command:  npm install github:469536968-svg/eip681-kit
+result:   exit 1 after 1.1s
+error:    npm error code ENOENT
+          npm error syscall spawn git
+          npm error path git
+```
+
+npm shells out to `git` to resolve a `github:` specifier, and **`git` is not present
+on this host** (confirmed independently: `spawn git --version` → `ENOENT`; no binary
+under Program Files, Program Files (x86), LOCALAPPDATA, or scoop). So the `github:`
+install path is **unavailable here** — not "probably fine".
+
+What that means if your machine *does* have git: the install will clone the repo and
+run no build step (there is nothing to build — it ships ESM sources), and it is not
+constrained by a `files` field because the repo has none; npm packs the whole checkout.
+**I have not executed that variant**, so treat the *on-a-git-host* behaviour as
+reasoned rather than verified. The verified path from this host is the pinned-commit
+file copy above.
+
+The npm registry is **not** part of any path in this document. Nothing here needed it.
 
 ## Why this file exists
 
