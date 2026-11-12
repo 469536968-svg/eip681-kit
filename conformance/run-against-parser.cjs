@@ -105,7 +105,7 @@ function collectHex(o, acc) {
 // ---------- main ----------
 const target = process.argv[2];
 if (!target) {
-  console.log('usage: node conformance/run-against-parser.cjs <module-name>');
+  console.log('usage: node conformance/run-against-parser.cjs <module-name | path/to/module.js>');
   console.log('');
   console.log('  <module-name> must already be installed (npm install <module-name>).');
   console.log('  Run this from the directory containing node_modules.');
@@ -121,12 +121,24 @@ if (!corpusPath) {
 // Resolve the target module from the CALLER's directory, not this script's, so that
 // `node path/to/run-against-parser.cjs foo` works when foo is installed in cwd.
 const req = createRequire(join(process.cwd(), 'noop.js'));
+// BUG 4 -- A PATH IS NOT A MODULE NAME. The usage line said 'pass a module name', but
+// the README tells people to pass ./subj/subject-unpatched.cjs. require() treats a bare
+// string with no ./ prefix as a PACKAGE name, so it never touches the filesystem
+// relative to cwd and fails with 'Cannot find module' -- making a correct invocation
+// look like a missing dependency. Detect the shape and require the absolute path.
+const looksLikePath = (t) => t.includes('/') || t.includes('\\') || /\.(?:c|m)?js$/i.test(t);
+const targetAbs = looksLikePath(target) ? resolve(process.cwd(), target) : null;
 let mod;
-try { mod = req(target); }
+try { mod = req(targetAbs || target); }
 catch (e) {
   console.log('HARNESS FAILURE: cannot require "' + target + '" from ' + process.cwd());
   console.log('  ' + String(e.message).split(LF)[0]);
-  console.log('  Did you run `npm install ' + target + '` in this directory?');
+  if (targetAbs) {
+    console.log('  resolved to: ' + targetAbs + '  exists: ' + existsSync(targetAbs));
+    console.log('  (read as a PATH: it contains a separator or a .js suffix)');
+  } else {
+    console.log('  Did you run `npm install ' + target + '` in this directory?');
+  }
   process.exit(2);
 }
 
