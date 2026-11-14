@@ -1,6 +1,6 @@
 {
   "name": "eip681-kit",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Strict EIP-681 payment URI parser, validator, formatter and CLI. Zero dependencies.",
   "type": "module",
   "main": "index.mjs",
@@ -12,15 +12,33 @@
       "types": "./index.d.ts",
       "import": "./index.mjs",
       "default": "./index.mjs"
-    }
+    },
+    "./split": {
+      "import": "./split.mjs",
+      "default": "./split.mjs"
+    },
+    "./strict": {
+      "import": "./strict.mjs",
+      "default": "./strict.mjs"
+    },
+    "./eip681": {
+      "import": "./eip681.mjs",
+      "default": "./eip681.mjs"
+    },
+    "./derive": {
+      "import": "./deriveEip681.mjs",
+      "default": "./deriveEip681.mjs"
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs",
+    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs && node split.test.cjs",
     "test:parser": "node test.mjs",
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
+    "test:split": "node split.test.cjs",
     "conformance": "node conformance/run.mjs && node conformance/vectors.run.mjs",
-    "test:all": "node tools/build_types.mjs && node types.test.mjs && node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs && node tools/verify_conformance_page.mjs && node conformance/check.mjs conformance/adapters/kit.mjs",
+    "test:all": "node tools/build_types.mjs && node types.test.mjs && node test.mjs && node cli.test.mjs && node deriveEip681.test.mjs && node padding-edge.test.mjs && node split.test.cjs && node adversarial.mjs && node conformance/run.mjs && node conformance/vectors.run.mjs && node tools/verify_conformance_page.mjs && node conformance/check.mjs conformance/adapters/kit.mjs",
     "lint:rust": "node tools/check_unrecognised.mjs tools/fixtures",
     "selfcheck": "node tools/check_unrecognised.mjs tools/fixtures",
     "test:adversarial": "node adversarial.mjs",
@@ -41,6 +59,8 @@
     "conformance",
     "deriveEip681.mjs",
     "eip681.mjs",
+    "strict.mjs",
+    "split.mjs",
     "vectors",
     "index.mjs",
     "index.d.ts"
@@ -56,7 +76,8 @@
     "validation",
     "eip-55",
     "zero-dependency",
-    "cli"
+    "cli",
+    "payment-split"
   ],
   "license": "MIT",
   "engines": {
