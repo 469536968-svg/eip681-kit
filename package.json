@@ -32,7 +32,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "node test.mjs && node deriveEip681.test.mjs && node cli.test.mjs && node padding-edge.test.mjs && node split.test.cjs",
+    "test": "node tools/run-chain.cjs",
     "test:parser": "node test.mjs",
     "test:derive": "node deriveEip681.test.mjs",
     "test:cli": "node cli.test.mjs",
@@ -50,7 +50,8 @@
     "conformance:check:naive": "node conformance/check.mjs conformance/adapters/naive.mjs",
     "build:types": "node tools/build_types.mjs",
     "test:types": "node types.test.mjs",
-    "prove:exports": "node tools/prove-exports.cjs"
+    "prove:exports": "node tools/prove-exports.cjs",
+    "test:selftest": "node tools/run-chain.cjs --selftest"
   },
   "files": [
     "LICENSE",
@@ -65,7 +66,8 @@
     "vectors",
     "index.mjs",
     "index.d.ts",
-    "tools/prove-exports.cjs"
+    "tools/prove-exports.cjs",
+    "tools/run-chain.cjs"
   ],
   "keywords": [
     "eip-681",
