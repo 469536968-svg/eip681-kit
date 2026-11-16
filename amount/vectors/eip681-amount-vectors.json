@@ -1,0 +1,529 @@
+{
+  "spec": "EIP-681 amount / uint256 conformance vectors",
+  "version": 1,
+  "generatedAt": "2026-11-16T23:42:54.065Z",
+  "generator": "eip681-kit amount/gen-vectors.cjs",
+  "method": "Every expect block is the actual return value of eip681-amount.mjs, obtained by running it. No expectation is hand-written. The semantics are pinned independently by amount/eip681-amount.test.mjs (52 assertions), which is what makes these vectors evidence rather than a tautology.",
+  "schema": {
+    "amount": "{ input: string, decimals: integer, expect: {ok:true,units:string} | {ok:false,reason:string} }",
+    "format": "{ units: string (base units, decimal), decimals: integer, expect: string }",
+    "decode": "{ input: string, expect: string | null }",
+    "note": "units are decimal STRINGS because 2^256 exceeds JSON number precision"
+  },
+  "refusalReasons": [
+    "empty",
+    "syntax",
+    "negative",
+    "hex-not-allowed",
+    "fraction-of-a-unit",
+    "exceeds-uint256"
+  ],
+  "counts": {
+    "amount": 43,
+    "format": 7,
+    "decode": 5
+  },
+  "amount": [
+    {
+      "group": "wei-legal",
+      "why": "bare integer",
+      "input": "1",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "zero is legal and must not be treated as falsy",
+      "input": "0",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "0"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "leading zeros carry no value",
+      "input": "007",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "7"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "plain integer",
+      "input": "42",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "42"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "the canonical EIP-681 example; mantissa x exponent is exact",
+      "input": "2.014e18",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "2014000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "lowercase exponent",
+      "input": "1e18",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "uppercase exponent is equivalent",
+      "input": "1E18",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "explicit plus in exponent is equivalent",
+      "input": "1e+18",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "exponent beyond Number range must still be exact",
+      "input": "1e40",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "10000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "18-digit literal",
+      "input": "1000000000000000000",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "CRITICAL: has a fraction part AND an exponent, yet is a whole 1e18 wei. Any guard of the form \"reject if it contains a dot\" fails here.",
+      "input": "0.000000000000000001e36",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000000"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "surrounding spaces are tolerated (spec is silent)",
+      "input": "  42  ",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "42"
+      }
+    },
+    {
+      "group": "wei-legal",
+      "why": "tabs and newlines are tolerated",
+      "input": "\t42\n",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "42"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "no wei representation, but exactly 1500000 base units of a 6-decimal token",
+      "input": "1.5",
+      "decimals": 6,
+      "expect": {
+        "ok": true,
+        "units": "1500000"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "100000 base units at 6dp",
+      "input": "0.1",
+      "decimals": 6,
+      "expect": {
+        "ok": true,
+        "units": "100000"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "1 whole token = 1e6 base units",
+      "input": "1",
+      "decimals": 6,
+      "expect": {
+        "ok": true,
+        "units": "1000000"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "the smallest 6dp unit is exactly 1",
+      "input": "0.000001",
+      "decimals": 6,
+      "expect": {
+        "ok": true,
+        "units": "1"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "same string, different token, different units",
+      "input": "1.5",
+      "decimals": 18,
+      "expect": {
+        "ok": true,
+        "units": "1500000000000000000"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "1e17 base units at 18dp",
+      "input": "0.1",
+      "decimals": 18,
+      "expect": {
+        "ok": true,
+        "units": "100000000000000000"
+      }
+    },
+    {
+      "group": "token-legal",
+      "why": "8dp (BTC-style) = 150000000",
+      "input": "1.5",
+      "decimals": 8,
+      "expect": {
+        "ok": true,
+        "units": "150000000"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "fraction of a wei",
+      "input": ".5",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "fraction-of-a-unit"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "fraction of a wei, spelled plainly",
+      "input": "0.1",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "fraction-of-a-unit"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "negative exponent goes below one wei",
+      "input": "1e-18",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "fraction-of-a-unit"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "7 decimals exceeds a 6dp token",
+      "input": "0.0000001",
+      "decimals": 6,
+      "expect": {
+        "ok": false,
+        "reason": "fraction-of-a-unit"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "negative",
+      "input": "-1",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "negative"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "negative at token precision",
+      "input": "-1.5",
+      "decimals": 6,
+      "expect": {
+        "ok": false,
+        "reason": "negative"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "hex is not a decimal amount",
+      "input": "0x10",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "hex-not-allowed"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "negative hex",
+      "input": "-0x10",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "hex-not-allowed"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "empty string",
+      "input": "",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "empty"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "whitespace only is empty, not zero",
+      "input": "   ",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "empty"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "two decimal points",
+      "input": "1.2.3",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "syntax"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "dangling exponent",
+      "input": "1e",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "syntax"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "letters",
+      "input": "abc",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "syntax"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "dot alone",
+      "input": ".",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "syntax"
+      }
+    },
+    {
+      "group": "refuse",
+      "why": "sign with no digits",
+      "input": "+",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "syntax"
+      }
+    },
+    {
+      "group": "uint256",
+      "why": "2^256-1 is the largest legal amount",
+      "input": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      }
+    },
+    {
+      "group": "uint256",
+      "why": "2^256 is one past the bound and must be refused",
+      "input": "115792089237316195423570985008687907853269984665640564039457584007913129639936",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "exceeds-uint256"
+      }
+    },
+    {
+      "group": "uint256",
+      "why": "a 400-digit amount cannot fit",
+      "input": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
+      "decimals": 0,
+      "expect": {
+        "ok": false,
+        "reason": "exceeds-uint256"
+      }
+    },
+    {
+      "group": "differential",
+      "why": "2^53+1: the first integer a double cannot represent",
+      "input": "9007199254740993",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "9007199254740993"
+      }
+    },
+    {
+      "group": "differential",
+      "why": "low digits lost by a 53-bit mantissa",
+      "input": "21000000000000000001",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "21000000000000000001"
+      }
+    },
+    {
+      "group": "differential",
+      "why": "fraction that only survives exact arithmetic",
+      "input": "1.000000000000000001e18",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1000000000000000001"
+      }
+    },
+    {
+      "group": "trap",
+      "why": "WRONG-ON-PURPOSE: base units parsed as a decimal amount are inflated 1e6x, silently",
+      "input": "1500000",
+      "decimals": 6,
+      "expect": {
+        "ok": true,
+        "units": "1500000000000"
+      }
+    },
+    {
+      "group": "trap",
+      "why": "base units parsed at 0dp are correct",
+      "input": "1500000",
+      "decimals": 0,
+      "expect": {
+        "ok": true,
+        "units": "1500000"
+      }
+    }
+  ],
+  "format": [
+    {
+      "why": "1.5 USDT",
+      "units": "1500000",
+      "decimals": 6,
+      "expect": "1.5"
+    },
+    {
+      "why": "smallest 6dp unit",
+      "units": "1",
+      "decimals": 6,
+      "expect": "0.000001"
+    },
+    {
+      "why": "one whole 18dp token",
+      "units": "1000000000000000000",
+      "decimals": 18,
+      "expect": "1"
+    },
+    {
+      "why": "the canonical EIP-681 example",
+      "units": "2014000000000000000",
+      "decimals": 18,
+      "expect": "2.014"
+    },
+    {
+      "why": "zero must format as \"0\", not \"\"",
+      "units": "0",
+      "decimals": 0,
+      "expect": "0"
+    },
+    {
+      "why": "mixed precision",
+      "units": "123456789",
+      "decimals": 6,
+      "expect": "123.456789"
+    },
+    {
+      "why": "amount far above 2^53 must format exactly",
+      "units": "1000000000000000000000000",
+      "decimals": 6,
+      "expect": "1000000000000000000"
+    }
+  ],
+  "decode": [
+    {
+      "why": "percent-encoded digit",
+      "input": "1%30",
+      "expect": "10"
+    },
+    {
+      "why": "no encoding needed",
+      "input": "2.014e18",
+      "expect": "2.014e18"
+    },
+    {
+      "why": "malformed escape must be refused, not passed through",
+      "input": "%ZZ",
+      "expect": null
+    },
+    {
+      "why": "plain",
+      "input": "1e18",
+      "expect": "1e18"
+    },
+    {
+      "why": "encoded dot",
+      "input": "1%2E5",
+      "expect": "1.5"
+    }
+  ]
+}
