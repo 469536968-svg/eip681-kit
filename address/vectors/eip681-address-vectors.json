@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "spec": "EIP-681 address field structure + EIP-55 checksum",
+    "generated_by": "address/gen-vectors.cjs",
+    "check_order": [
+      "empty",
+      "prefix-only",
+      "too-short",
+      "too-long",
+      "non-hex",
+      "bad-checksum"
+    ],
+    "reason_note": "exactly these six values; refused cases carry a reason so a caller cannot conflate them",
+    "control_targets": {
+      "case-blind": 1,
+      "truncating": 3,
+      "padding": 1
+    }
+  },
+  "address": [
+    {
+      "group": "legal",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "note": "real USDC on Base, mixed case checksum valid",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": true,
+        "checksummed": true
+      }
+    },
+    {
+      "group": "legal",
+      "input": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "note": "all lowercase: no checksum information, legal",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": true,
+        "checksummed": false
+      }
+    },
+    {
+      "group": "legal",
+      "input": "0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913",
+      "note": "all uppercase: no checksum information, legal",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": true,
+        "checksummed": false
+      }
+    },
+    {
+      "group": "legal",
+      "input": "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "note": "no prefix: 40 hex digits is still one address",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": false,
+        "checksummed": true
+      }
+    },
+    {
+      "group": "legal",
+      "input": "0x0000000000000000000000000000000000000000",
+      "note": "zero address is structurally valid",
+      "expect": {
+        "ok": true,
+        "address": "0x0000000000000000000000000000000000000000",
+        "prefixed": true,
+        "checksummed": false
+      }
+    },
+    {
+      "group": "legal",
+      "input": "0x4200000000000000000000000000000000000006",
+      "note": "WETH on Base, trailing zeros significant",
+      "expect": {
+        "ok": true,
+        "address": "0x4200000000000000000000000000000000000006",
+        "prefixed": true,
+        "checksummed": false
+      }
+    },
+    {
+      "group": "legal",
+      "input": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "note": "vitalik.eth resolved address",
+      "expect": {
+        "ok": true,
+        "address": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+        "prefixed": true,
+        "checksummed": true
+      }
+    },
+    {
+      "group": "legal",
+      "input": "  0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  ",
+      "note": "surrounding whitespace is trimmed, not rejected",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": true,
+        "checksummed": true
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "",
+      "note": "empty string",
+      "expect": {
+        "ok": false,
+        "reason": "empty"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "0x",
+      "note": "prefix with no body",
+      "expect": {
+        "ok": false,
+        "reason": "prefix-only"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "0X",
+      "note": "uppercase prefix, no body",
+      "expect": {
+        "ok": false,
+        "reason": "prefix-only"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA0291",
+      "note": "39 hex digits, one short",
+      "expect": {
+        "ok": false,
+        "reason": "too-short"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "vitalik.eth",
+      "note": "ENS name is not an address; too-short fires before non-hex",
+      "expect": {
+        "ok": false,
+        "reason": "too-short"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA0291z",
+      "note": "exactly 40 body chars, one non-hex: reaches the hex check",
+      "expect": {
+        "ok": false,
+        "reason": "non-hex"
+      }
+    },
+    {
+      "group": "refuse",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b5+123456789",
+      "note": "exactly 40 body chars containing a plus sign",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      }
+    },
+    {
+      "group": "checksum",
+      "input": "0x833589FCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "note": "one letter case-flipped at body index 6, otherwise valid -> must be rejected",
+      "expect": {
+        "ok": false,
+        "reason": "bad-checksum"
+      },
+      "controlTarget": "case-blind"
+    },
+    {
+      "group": "checksum",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "note": "canonical EIP-55 form re-derived, must be accepted",
+      "expect": {
+        "ok": true,
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "prefixed": true,
+        "checksummed": true
+      }
+    },
+    {
+      "group": "trap",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913a",
+      "note": "41 digits: slicing to 40 returns USDC silently",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      },
+      "controlTarget": "truncating"
+    },
+    {
+      "group": "trap",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913abc",
+      "note": "43 digits: slicing to 40 returns USDC silently",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      },
+      "controlTarget": "truncating"
+    },
+    {
+      "group": "trap",
+      "input": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913ffffffffffffffffff",
+      "note": "58 digits: eth-url-parser chain_id absorption shape",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      },
+      "controlTarget": "truncating"
+    },
+    {
+      "group": "trap",
+      "input": "0x000000000000000000000000833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "note": "64 digits, left-padded with 24 zeros: classic ABI uint256 encoding; unwrapping is a GUESS, must be refused",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      },
+      "controlTarget": "padding"
+    },
+    {
+      "group": "trap",
+      "input": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "note": "64 f-digits: max uint256, not an address",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      }
+    },
+    {
+      "group": "trap",
+      "input": "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913000000000000000000000000",
+      "note": "64 digits, right-padded: address-then-junk, must be refused",
+      "expect": {
+        "ok": false,
+        "reason": "too-long"
+      }
+    }
+  ]
+}
