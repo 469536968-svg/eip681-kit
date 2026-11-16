@@ -15,22 +15,35 @@ the uint256 boundary, and three cases that a `Double`-based parser gets wrong.
 
 They were **not hand-written**. `gen-vectors.cjs` produces them by calling the
 reference parser and serializing its actual return value. That alone would be a
-tautology, so two independent things pin it down:
+tautology, so three independent things pin it down:
 
 1. `amount/eip681-amount.test.mjs` — 52 assertions that state the intended semantics
    in prose-and-assertion form, written before the vectors existed.
 2. `amount/verify-vectors.cjs` — re-reads the JSON **from disk** as a consumer,
    re-checks all 55 cases, and then runs a **negative control**: a deliberately
-   naive `Number()`-based parser must fail the `differential` group. Current result:
+   naive `Number()`-based parser must fail the `differential` group.
+3. `amount/conformance_py.py` — a **second, from-scratch implementation in Python**
+   that never imports the JavaScript. If the vectors were just my JS behavior
+   serialized, an independent implementation reading the same spec would diverge.
 
-   ```
-   strict re-check: 55 passed, 0 failed  (vectors: amount=43 format=7 decode=5)
-   negative control: float parser caught on 3 differential case(s), wrongly agreed on 0
-   RESULT: PASS (vectors reproduce, and they discriminate against float arithmetic)
-   ```
+Actual output of 2 and 3, run on 2026-11-16:
 
-If the vectors stopped discriminating, that control would go to `0 caught` and the
-run would fail. The vectors are evidence only for as long as they can fail.
+```
+strict re-check: 55 passed, 0 failed  (vectors: amount=43 format=7 decode=5)
+negative control: float parser caught on 3 differential case(s), wrongly agreed on 0
+RESULT: PASS (vectors reproduce, and they discriminate against float arithmetic)
+
+python (independent, from-scratch): 55 passed, 0 failed of 55
+RESULT: PASS -- two independent implementations agree on all 55 vectors, so the file is language-neutral
+```
+
+If the vectors stopped discriminating, control 2 would report `0 caught` and the run
+would fail. The vectors are evidence only for as long as they can fail.
+
+**Honest limit:** both implementations were written by the same agent. Agreement shows
+the semantics are *reproducible from the written spec*, not that a third party would
+rule them correct. Disagreement would have been decisive; agreement is strong but not
+final evidence.
 
 ## Schema
 
@@ -104,12 +117,16 @@ force the caller to say which one they mean. This is vector group `trap`.
 ```bash
 node amount/gen-vectors.cjs      # regenerate from the reference parser
 node amount/verify-vectors.cjs   # consumer check + negative control (exit 1 on failure)
+python amount/conformance_py.py  # independent Python implementation, same 55 vectors
 ```
 
 `verify-vectors.cjs` exits non-zero if any case fails **or** if the float control stops
 being caught. Wire it into CI and the vectors cannot silently rot.
 
 ## Consuming from another language
+
+The Python file is a complete worked example — copy its shape rather than the JS one
+if you are not writing JavaScript:
 
 ```python
 import json
@@ -125,6 +142,18 @@ Give your parser the same shape as `expect` — `{ok: true, units: "<decimal str
 or `{ok: false, reason: "<one of the six>"}` — and the whole file becomes a test suite
 for free. If your parser returns a `float` or a `double` for `units`, it will fail
 `differential`, correctly.
+
+## Known coverage gap (found while writing the Python)
+
+The Python `decode_param_value` I first wrote contained a **nonsensical bounds
+condition** (an `and` over two contradictory comparisons). It passed all five decode
+vectors anyway, because the very next check — that the two characters after `%` are
+valid hex — subsumes it. So a malformed *guarding* expression is invisible to this
+vector set as long as a *later* check catches the same inputs.
+
+Concretely: these vectors prove your decoder's **output** is right. They do not prove
+every branch of your decoder is reachable or correct. If you are auditing rather than
+testing, read the code too.
 
 ## License / provenance
 
