@@ -51,7 +51,9 @@
     "build:types": "node tools/build_types.mjs",
     "test:types": "node types.test.mjs",
     "prove:exports": "node tools/prove-exports.cjs",
-    "test:selftest": "node tools/run-chain.cjs --selftest"
+    "test:selftest": "node tools/run-chain.cjs --selftest",
+    "audit:pack": "node tools/npm-pack-audit.cjs",
+    "audit:coldstart": "node tools/npm-cold-start.cjs"
   },
   "files": [
     "LICENSE",
@@ -84,6 +86,7 @@
     "index.mjs",
     "split.mjs",
     "strict.mjs",
+    "tools/npm-cold-start.cjs",
     "tools/prove-exports.cjs",
     "tools/run-chain.cjs",
     "vectors/README.md",
