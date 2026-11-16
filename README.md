@@ -9,8 +9,26 @@ unknown parser* is not — and the failure mode is money sent to the wrong place
 This library refuses to guess. Malformed input produces errors. Valid-but-dangerous
 input produces **warnings that name the hazard**, so the caller can decide.
 
+## Conformance vectors (language-neutral, adoptable)
 
-> **Installing without npm?** A verified, no-registry install path (pinned commit + byte-identical check) is documented in [CONSUMING.md](./CONSUMING.md).
+Two independent vector sets you can drop into your own test suite without using this
+library. Each ships a JSON file, a generator that asserts its own coverage before it
+will write anything, and a verifier that scores itself against real parser bugs as
+negative controls.
+
+| directory | covers | vectors | negative controls |
+|---|---|---|---|
+| [`amount/vectors/`](amount/vectors/) | value field: precision, uint256 bounds, fractional units | 43 amount + 7 format + 5 decode | float parser must fail 3 differential cases |
+| [`address/vectors/`](address/vectors/) | address field: length, charset, EIP-55 checksum | 23 (8 legal, 7 refuse, 2 checksum, 6 trap) | slicing, ABI-unwrap, case-blind |
+
+The address set exists because of one specific bug class: a wrong-length address is
+usually not rejected, it is silently cut down to a *different valid account*. Measured
+twice — `eth-url-parser@1.0.4` accepted 24/24 over-length inputs, `librustzcash` accepted
+25/25 before the fix that is now merged upstream as PR #3062. The trap vectors prove the
+corruption is silent: 43 characters in, a real USDC address out, no error raised.
+
+Both sets are checked by a from-scratch second implementation (`amount/conformance_py.py`,
+55/55) and by consumer-side re-derivation from disk — not by their own generator alone.
 
 ## Install
 
